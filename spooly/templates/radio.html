@@ -1,0 +1,166 @@
+{% extends "base.html" %}
+
+{% block extra_head %}
+<link rel="stylesheet" href="{{ static_asset('radio.css') }}">
+{% endblock %}
+
+{% block content %}
+<main id="radio-page" class="radio-page" data-radio-root>
+  <div class="radio-atmosphere" aria-hidden="true">
+    <video
+      id="radio-atmosphere-video"
+      class="radio-atmosphere-video"
+      muted
+      loop
+      playsinline
+      preload="metadata"
+      src="{{ static_asset('radio/rain-window.mp4') }}"
+      poster="{{ static_asset('radio/rain-window-poster.jpg') }}"
+      data-room-rain-src="{{ static_asset('radio/rain-window.mp4') }}"
+      data-room-rain-poster="{{ static_asset('radio/rain-window-poster.jpg') }}"
+      data-room-breeze-src="{{ static_asset('radio/breeze-window.mp4') }}"
+      data-room-breeze-poster="{{ static_asset('radio/breeze-window-poster.jpg') }}"
+      disablepictureinpicture
+      tabindex="-1"
+    ></video>
+    <canvas
+      id="radio-atmosphere-canvas"
+      class="radio-atmosphere-canvas"
+      data-shader-glass="{{ static_asset('radio/rain-glass.frag') }}"
+      data-shader-snow="{{ static_asset('radio/snow-window.frag') }}"
+      data-shader-hearth="{{ static_asset('radio/hearth.frag') }}"
+      data-shader-firefly="{{ static_asset('radio/firefly.frag') }}"
+    ></canvas>
+    <span class="radio-atmosphere-wash"></span>
+    <span class="radio-glow radio-glow-a"></span>
+    <span class="radio-glow radio-glow-b"></span>
+    <span class="radio-grain"></span>
+  </div>
+
+  <div class="radio-layout">
+    <section class="signal-stage" aria-label="Radio player">
+      <div class="signal-caption" aria-hidden="true">
+        <span>TKL</span><span>RADIO · 24/7</span>
+      </div>
+      <button id="btn-play" class="signal-disc" type="button" title="Play" aria-label="Play" aria-pressed="false">
+        <span class="disc-halo" aria-hidden="true"></span>
+        <span class="record-surface" aria-hidden="true"></span>
+        <span class="signal-marker" aria-hidden="true"></span>
+        <span id="tuning-dial" class="signal-core">
+          <img id="cover-art" class="cover-art" alt="" decoding="async">
+          <span id="cover-wave" class="signal-bars" aria-hidden="true">
+            <span></span><span></span><span></span><span></span><span></span>
+          </span>
+        </span>
+        <span class="play-state" aria-hidden="true">
+          <svg class="play-symbol" viewBox="0 0 24 24"><path d="M8.2 5.7 18 12l-9.8 6.3z"/></svg>
+          <svg class="pause-symbol" viewBox="0 0 24 24"><path d="M7.5 5.5h3.2v13H7.5zm5.8 0h3.2v13h-3.2z"/></svg>
+        </span>
+      </button>
+      <div class="signal-status" aria-hidden="true">
+        <span class="signal-dot"></span><span>ON AIR</span>
+      </div>
+    </section>
+
+    <div class="radio-console">
+      <div class="station-room-bar">
+        <div class="station-chip">
+          <span class="station-pulse" aria-hidden="true"><i></i><i></i><i></i></span>
+          <span id="station-name">Default Station</span>
+        </div>
+        <div class="room-picker">
+          <button id="btn-room-sound" class="room-sound" type="button" aria-pressed="true" aria-label="Ambient sound: on" title="Ambient sound: on">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 19v2M8 13v2M16 19v2M16 13v2M12 21v2M12 15v2"/><path d="M20 16.58A5 5 0 0 0 18 7h-1.26A8 8 0 1 0 4 15.25"/></svg>
+          </button>
+          <button
+            id="btn-room"
+            class="room-trigger"
+            type="button"
+            aria-haspopup="listbox"
+            aria-expanded="false"
+            aria-controls="room-menu"
+            aria-label="Ambience: rainy night. Click to select."
+          >
+            <span class="room-status-dot" aria-hidden="true"></span>
+            <span id="room-label">ROOM · RAIN</span>
+          </button>
+          <div id="room-menu" class="room-menu" role="listbox" aria-label="Choose ambience" hidden>
+            <button class="room-option" type="button" role="option" data-room="glass" aria-selected="false">
+              <span class="room-option-key">GLASS</span>
+              <span class="room-option-name">Rain on Glass</span>
+            </button>
+            <button class="room-option" type="button" role="option" data-room="snow" aria-selected="false">
+              <span class="room-option-key">SNOW</span>
+              <span class="room-option-name">Snowy Night</span>
+            </button>
+            <button class="room-option" type="button" role="option" data-room="hearth" aria-selected="false">
+              <span class="room-option-key">HEARTH</span>
+              <span class="room-option-name">By the Fire</span>
+            </button>
+            <button class="room-option" type="button" role="option" data-room="firefly" aria-selected="false">
+              <span class="room-option-key">FIREFLY</span>
+              <span class="room-option-name">Summer Night</span>
+            </button>
+            <button class="room-option" type="button" role="option" data-room="rain" aria-selected="true">
+              <span class="room-option-key">RAIN</span>
+              <span class="room-option-name">Rainy Window</span>
+            </button>
+            <button class="room-option" type="button" role="option" data-room="breeze" aria-selected="false">
+              <span class="room-option-key">BREEZE</span>
+              <span class="room-option-name">Afternoon Breeze</span>
+            </button>
+            <button class="room-option" type="button" role="option" data-room="off" aria-selected="false">
+              <span class="room-option-key">OFF</span>
+              <span class="room-option-name">Still Background</span>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <section class="now-playing" aria-live="polite">
+        <div class="now-playing-label">NOW PLAYING</div>
+        <div id="track-title" class="track-title">Radio</div>
+        <div id="track-meta" class="track-meta"></div>
+      </section>
+
+      <section class="progress-panel" aria-label="Playback progress">
+        <input id="progress-bar" type="range" min="0" max="100" value="0" aria-label="Playback progress">
+        <div class="time-row">
+          <span id="time-current">0:00</span>
+          <span id="time-total">0:00</span>
+        </div>
+      </section>
+
+      <section class="radio-controls" aria-label="Radio controls">
+        <button id="btn-fav" class="radio-button" type="button" title="Add to favorites" aria-label="Add to favorites" aria-pressed="false">
+          <i data-feather="heart"></i>
+          <span class="sr-only">Add to favorites</span>
+        </button>
+        <button id="btn-encore" class="radio-button" type="button" title="Encore" aria-label="Play again" aria-pressed="false">
+          <i data-feather="repeat"></i>
+          <span id="encore-count" class="encore-count" aria-hidden="true"></span>
+        </button>
+        <button id="btn-next" class="radio-button is-primary" type="button" title="Next" aria-label="Next track">
+          <i data-feather="skip-forward"></i>
+        </button>
+        <button id="btn-sleep" class="radio-button" type="button" title="Sleep timer" aria-label="Sleep timer" aria-pressed="false">
+          <i data-feather="moon"></i>
+          <span id="sleep-label" class="sr-only">Sleep timer</span>
+        </button>
+      </section>
+    </div>
+  </div>
+
+  <ul id="upcoming-preview" class="hidden" aria-hidden="true">
+    <li></li>
+  </ul>
+  <ul id="upcoming-list" class="hidden" aria-hidden="true"></ul>
+  <div id="station-options" class="hidden"></div>
+</main>
+{% endblock %}
+
+{% block extra_body %}
+<script src="{{ static_asset('radio_scene.js') }}"></script>
+<script src="{{ static_asset('radio_ambience.js') }}"></script>
+<script src="{{ static_asset('radio_controller.js') }}"></script>
+{% endblock %}

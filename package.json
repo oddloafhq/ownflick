@@ -1,0 +1,27 @@
+{
+  "name": "spooly",
+  "version": "0.8.7",
+  "description": "A local media server that combines the features of TikTok and Pinterest",
+  "scripts": {
+    "build-css": "tailwindcss -i ./spooly/static/input.css -o ./spooly/static/output.css --watch",
+    "build-css-prod": "tailwindcss -i ./spooly/static/input.css -o ./spooly/static/output.css --minify",
+    "dev": "npm run build-css",
+    "build": "npm run build-css-prod"
+  },
+  "devDependencies": {
+    "playwright-core": "^1.63.0",
+    "tailwindcss": "^4.3.0"
+  },
+  "keywords": [
+    "spooly",
+    "tiktok",
+    "pinterest",
+    "media-server",
+    "flask"
+  ],
+  "author": "Oddloaf <oddloafhq@users.noreply.github.com>",
+  "license": "MIT",
+  "dependencies": {
+    "@tailwindcss/cli": "^4.3.0"
+  }
+}

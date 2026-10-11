@@ -1,0 +1,249 @@
+{% extends "base.html" %}
+
+{% block extra_head %}
+<link rel="stylesheet" href="{{ static_asset('library_timeline.css') }}">
+<link rel="stylesheet" href="{{ static_asset('library.css') }}">
+{% endblock %}
+
+{% block content %}
+<main class="{% if scope in ['favorite', 'collection'] %}saved-page{% elif library_view == 'timeline' %}timeline-page-shell{% else %}container mx-auto px-2 pt-2 pb-1 md:px-3{% endif %}">
+  {% if scope == 'all' and library_view == 'timeline' %}
+  <header class="timeline-masthead">
+    <div class="timeline-masthead-copy">
+      <p class="timeline-kicker">PRIVATE ARCHIVE</p>
+      <h1>Moments in Time</h1>
+      <p class="timeline-intro">Move through the months and rediscover moments kept close.</p>
+    </div>
+    <nav class="library-view-switch" aria-label="Library view">
+      <a class="is-active" href="/library" aria-current="page">Timeline</a>
+      <a href="/library?view=explore">Explore</a>
+    </nav>
+  </header>
+  <div class="timeline-sticky-bar" id="timeline-sticky-bar">
+    <button class="timeline-current-date" id="timeline-current-date" type="button" aria-label="Choose year">
+      <span id="timeline-current-label">Recent</span>
+      <i data-feather="chevron-down" aria-hidden="true"></i>
+    </button>
+    <span class="timeline-time-basis">By media date</span>
+  </div>
+  <div class="timeline-year-popover" id="timeline-year-popover" hidden>
+    <div class="timeline-year-list" id="timeline-year-list"></div>
+  </div>
+  <section id="timeline-stream" class="timeline-stream" aria-label="Browse media by month"></section>
+  {% elif scope == 'all' and library_view == 'month' %}
+  <header class="month-detail-header">
+    <a class="month-detail-back" href="/library?view=timeline#month-{{ timeline_month }}" aria-label="Return to timeline">
+      <i data-feather="arrow-left" aria-hidden="true"></i>
+      <span>Timeline</span>
+    </a>
+    <div>
+      <p>MONTH ARCHIVE</p>
+      <h1 data-month-heading="{{ timeline_month }}">{{ timeline_month }}</h1>
+    </div>
+  </header>
+  {% elif scope == 'all' %}
+  <section class="library-toolbar-wrap">
+    <div id="library-toolbar" class="library-toolbar{% if request.args.get('q', '') %} is-searching is-search-open{% endif %}">
+    <div class="explore-heading-row">
+      <div>
+        <p class="explore-kicker">DISCOVER</p>
+        <h1 class="explore-title">Explore Your Library</h1>
+      </div>
+      <nav class="library-view-switch" aria-label="Library view">
+        <a href="/library">Timeline</a>
+        <a class="is-active" href="/library?view=explore" aria-current="page">Explore</a>
+      </nav>
+    </div>
+    <div class="library-toolbar-row">
+    <div class="mode-tabs" id="mode-tabs" aria-label="Library browsing mode">
+      <button type="button" class="mode-tab" data-mode="all">All</button>
+      <button type="button" class="mode-tab" data-mode="image_random">Random Images</button>
+      <button type="button" class="mode-tab" data-mode="video_latest">Latest Videos</button>
+      <button type="button" class="mode-tab" data-mode="big_files">Large Files</button>
+    </div>
+    <button id="library-search-toggle" class="library-search-toggle" type="button" aria-label="Search library" aria-controls="library-search" aria-expanded="{% if request.args.get('q', '') %}true{% else %}false{% endif %}" title="Search">
+      <i data-feather="search" aria-hidden="true"></i>
+    </button>
+    </div>
+    <div id="library-search" class="library-search" role="search">
+      <i data-feather="search" class="library-search-icon" aria-hidden="true"></i>
+      <label class="sr-only" for="library-search-input">Search library</label>
+      <input id="library-search-input" type="search" maxlength="200" autocomplete="off" spellcheck="false" placeholder="Search filenames or paths" value="{{ request.args.get('q', '') }}">
+      <button id="library-search-clear" class="library-search-clear" type="button" aria-label="Clear search" title="Clear search"{% if not request.args.get('q', '') %} hidden{% endif %}>
+        <i data-feather="x" aria-hidden="true"></i>
+      </button>
+    </div>
+    </div>
+  </section>
+  {% elif scope == 'favorite' %}
+  {% set saved_active = 'favorite' %}
+  {% include '_saved_header.html' %}
+  {% elif scope == 'collection' %}
+  <section>
+    <div class="collection-nav">
+      <a class="collection-nav-back" href="/collections">
+        <i data-feather="arrow-left"></i>
+        <span>All Collections</span>
+      </a>
+    </div>
+    <div class="collection-identity">
+      <div id="collection-identity-cover" class="collection-identity-cover">
+        {% if collection_preview_items %}
+        <div class="collection-identity-collage" data-count="{{ collection_preview_items | length }}">
+          {% for preview in collection_preview_items %}
+          <span class="collection-identity-tile" data-uri="{{ preview.uri }}" data-type="{{ preview.type }}">
+            <img src="{{ preview.thumb_url }}" alt="" loading="eager" decoding="async">
+          </span>
+          {% endfor %}
+        </div>
+        {% else %}
+        <div class="collection-identity-empty"><i data-feather="layers" aria-hidden="true"></i></div>
+        {% endif %}
+      </div>
+      <div class="collection-identity-copy">
+        <h1 class="collection-identity-title">{{ collection_name }}</h1>
+        <div class="collection-identity-count">{{ collection_count }} media items</div>
+        {% if collection_description %}<p class="collection-identity-description">{{ collection_description }}</p>{% endif %}
+      </div>
+    </div>
+  </section>
+  {% endif %}
+
+  {% if not (scope == 'all' and library_view == 'timeline') %}
+  <section id="library-grid" class="masonry-grid{% if scope in ['favorite', 'collection'] %} saved-content{% endif %}"></section>
+  {% endif %}
+  <div id="library-loading" class="library-loading" aria-live="polite">
+    <div id="library-status-text">Loading...</div>
+    <div id="library-status-actions" class="library-status-actions" hidden>
+      <button id="library-retry" class="library-status-action" type="button" hidden>Reload</button>
+      <button id="library-clear-search" class="library-status-action" type="button" hidden>Clear Search</button>
+    </div>
+  </div>
+  <div id="library-sentinel" style="height: 1px;"></div>
+</main>
+
+<div id="quick-view" aria-hidden="true">
+  <div id="quick-feed-layer">
+    <video id="quick-video" class="quick-media" playsinline preload="metadata"></video>
+    <img id="quick-image" class="quick-media" alt="" />
+    <div id="quick-overlay"></div>
+    <div id="quick-play-status" aria-hidden="true">
+      <svg id="quick-play-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
+    </div>
+  </div>
+
+  <button id="quick-close-top" type="button" title="Close">
+    <i data-feather="x"></i>
+  </button>
+  <div class="quick-counter" id="quick-counter">1 / 1</div>
+
+  <div id="quick-controls" class="is-hidden">
+    <span class="quick-time" id="quick-time-current">00:00</span>
+    <div class="quick-progress-wrap">
+      <input type="range" id="quick-progress" min="0" max="100" step="0.1" value="0" />
+      <div class="quick-progress-track"></div>
+      <div class="quick-progress-fill" id="quick-progress-fill"></div>
+    </div>
+    <span class="quick-time" id="quick-time-total">00:00</span>
+  </div>
+
+  <div class="quick-actions">
+    <button id="quick-speed" class="quick-btn" type="button" title="Playback speed">1x</button>
+    <button id="quick-caption" class="quick-btn" type="button" title="Generate Title" hidden>
+      <i data-feather="zap"></i>
+    </button>
+
+    <div class="quick-image-tool-wrap" id="quick-magnifier-tool-wrap" hidden>
+      <div class="quick-zoom-options" id="quick-zoom-options">
+        <button type="button" class="quick-zoom-btn active" data-level="2.5">2.5x</button>
+        <button type="button" class="quick-zoom-btn" data-level="5">5x</button>
+      </div>
+      <button id="quick-magnifier-toggle" class="quick-btn" type="button" title="Magnifier">
+        <i data-feather="search"></i>
+      </button>
+    </div>
+
+    <button id="quick-favorite" class="quick-btn" type="button" title="Add to Favorites">
+      <i data-feather="heart"></i>
+    </button>
+    <button id="quick-collection" class="quick-btn" type="button" title="Add to Collection">
+      <i data-feather="bookmark"></i>
+      <span class="collection-count" id="quick-collection-count">0</span>
+    </button>
+    <button id="quick-set-cover" class="quick-btn is-hidden" type="button" title="Set as Collection Cover">
+      <i class="set-cover-default-icon" data-feather="image"></i>
+      <i class="set-cover-current-icon" data-feather="check"></i>
+    </button>
+    <a id="quick-source" class="quick-btn is-hidden" href="#" target="_blank" rel="noopener noreferrer" title="View Source">
+      <i data-feather="external-link"></i>
+    </a>
+    <a id="quick-detail" class="quick-btn" href="#" title="View Details">
+      <i data-feather="info"></i>
+    </a>
+  </div>
+
+  <div class="quick-caption-panel is-hidden" id="quick-caption-panel">
+    <div class="quick-caption-title" id="quick-caption-title"></div>
+    <div class="quick-caption-tags" id="quick-caption-tags"></div>
+  </div>
+
+  <div class="quick-magnifier" id="quick-magnifier">
+    <div class="quick-mag-badge" id="quick-mag-badge">2.5x</div>
+  </div>
+</div>
+
+<div id="quick-collection-modal" class="quick-collection-modal" aria-hidden="true">
+  <div class="quick-collection-card">
+    <div class="coll-drag-handle"></div>
+    <div class="quick-collection-header">
+      <div class="quick-collection-title-row">
+        <h3>Add to Collection</h3>
+        <button id="quick-collection-close" type="button" class="quick-collection-close">
+          <i data-feather="x"></i>
+        </button>
+      </div>
+      <div id="quick-collection-meta" class="quick-collection-meta">Not in any collections</div>
+    </div>
+    <div id="quick-collection-list" class="quick-collection-list"></div>
+    <div class="quick-collection-create">
+      <input id="quick-collection-name" type="text" maxlength="80" placeholder="New collection name" />
+      <button id="quick-collection-create-btn" type="button">Create</button>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_body %}
+<script src="{{ static_asset('flow_ui_shared.js') }}"></script>
+<script src="{{ static_asset('collection_picker.js') }}"></script>
+<script src="{{ static_asset('flow_state_controller.js') }}"></script>
+<script src="{{ static_asset('flow_session.js') }}"></script>
+<script src="{{ static_asset('flow_actions_shared.js') }}"></script>
+<script src="{{ static_asset('flow_media_actions_controller.js') }}"></script>
+<script src="{{ static_asset('hammer.min.js') }}"></script>
+<script>
+  window.__SPOOLY_LIBRARY_BOOT__ = {
+    scope: {{ scope | tojson }},
+    collectionId: {{ collection_id | tojson }},
+    collectionCoverUri: {{ collection_cover_uri | tojson }},
+    pageSize: {{ page_size }},
+    initialItems: {{ initial_items | tojson }},
+    initialHasMore: {{ 'true' if initial_has_more else 'false' }},
+    initialNextOffset: {{ initial_next_offset }},
+    initialMode: {{ active_mode | tojson }},
+    initialSeed: {{ mode_seed | tojson }},
+    minMb: {{ min_mb }},
+    emptyMessage: {{ empty_message | tojson }},
+    libraryView: {{ library_view | default('explore') | tojson }},
+    timelineMonth: {{ timeline_month | default('') | tojson }},
+  };
+</script>
+{% if scope == 'all' and library_view == 'timeline' %}
+<script>
+  window.__SPOOLY_TIMELINE_BOOT__ = {{ timeline_payload | tojson }};
+</script>
+<script src="{{ static_asset('library_timeline_controller.js') }}"></script>
+{% else %}
+<script src="{{ static_asset('library_page_controller.js') }}"></script>
+{% endif %}
+{% endblock %}

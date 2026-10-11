@@ -1,0 +1,1415 @@
+:root {
+  --radio-bg: #eeede7;
+  --radio-ink: #24241f;
+  --radio-muted: rgba(36, 36, 31, 0.48);
+  --radio-soft: rgba(36, 36, 31, 0.055);
+  --radio-line: rgba(36, 36, 31, 0.11);
+  --radio-accent: #466b61;
+  --radio-warm: #a88756;
+  --radio-paper: rgba(255, 255, 250, 0.44);
+  --radio-art-a: #466b61;
+  --radio-art-b: #a88756;
+  --radio-art-c: #d7d2c4;
+}
+
+[data-theme="dark"] {
+  --radio-bg: #10110f;
+  --radio-ink: #e8e4da;
+  --radio-muted: rgba(232, 228, 218, 0.48);
+  --radio-soft: rgba(232, 228, 218, 0.07);
+  --radio-line: rgba(232, 228, 218, 0.13);
+  --radio-accent: #9fb9ad;
+  --radio-warm: #b89b62;
+  --radio-paper: rgba(255, 250, 235, 0.055);
+  --radio-art-a: #9fb9ad;
+  --radio-art-b: #b89b62;
+  --radio-art-c: #272a25;
+}
+
+body {
+  background:
+    radial-gradient(ellipse at 50% 43%, color-mix(in oklab, var(--radio-accent) 7%, transparent), transparent 21rem),
+    linear-gradient(120deg, rgba(255,255,255,0.2), transparent 42%),
+    var(--radio-bg);
+}
+
+body:has([data-radio-root]) {
+  padding-bottom: 0 !important;
+  overflow: hidden;
+}
+
+[data-theme="dark"] body {
+  background:
+    radial-gradient(ellipse at 50% 43%, color-mix(in oklab, var(--radio-accent) 8%, transparent), transparent 23rem),
+    linear-gradient(120deg, rgba(255,255,255,0.035), transparent 42%),
+    var(--radio-bg);
+}
+
+.radio-page {
+  width: min(100% - 2rem, 33rem);
+  height: 100dvh;
+  min-height: 0;
+  margin: 0 auto;
+  padding: clamp(0.75rem, 2dvh, 1.15rem) 0 max(5.85rem, calc(env(safe-area-inset-bottom) + 5.05rem));
+  display: grid;
+  grid-template-rows: auto auto auto auto;
+  align-content: center;
+  gap: clamp(0.54rem, 1.45dvh, 0.9rem);
+  color: var(--radio-ink);
+  overflow: hidden;
+}
+
+.now-playing {
+  min-height: 3.85rem;
+  display: grid;
+  align-content: center;
+  gap: 0.12rem;
+  text-align: center;
+  transition: opacity 520ms ease, transform 620ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.track-title {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  max-width: min(100%, 28.5rem);
+  margin: 0 auto;
+  font-size: clamp(1.08rem, 2.6vw, 1.28rem);
+  line-height: 1.36;
+  font-weight: 600;
+  letter-spacing: 0;
+  color: color-mix(in oklab, var(--radio-ink) 82%, transparent);
+}
+
+.track-meta {
+  min-height: 1.15rem;
+  max-width: min(100%, 22rem);
+  margin: 0 auto;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 0.76rem;
+  line-height: 1.4;
+  font-weight: 520;
+  color: var(--radio-muted);
+  opacity: 0;
+  transition: opacity 520ms ease;
+}
+
+.track-meta.has-meta {
+  opacity: 1;
+}
+
+.radio-page.is-changing-track .now-playing {
+  opacity: 0;
+  transform: translateY(0.34rem);
+}
+
+.radio-page.is-changing-track .signal-disc {
+  opacity: 0.62;
+  transform: scale(0.982);
+}
+
+.signal-stage {
+  display: grid;
+  place-items: center;
+  min-height: 0;
+  align-self: center;
+  isolation: isolate;
+}
+
+.signal-disc {
+  position: relative;
+  width: min(76vw, 52dvh, 19.2rem);
+  aspect-ratio: 1;
+  border: 0;
+  border-radius: 999px;
+  display: grid;
+  place-items: center;
+  color: var(--radio-accent);
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  background: transparent;
+  transition: transform 900ms cubic-bezier(0.22, 1, 0.36, 1), opacity 700ms ease;
+}
+
+.signal-disc:focus-visible {
+  outline: 2px solid color-mix(in oklab, var(--radio-accent) 62%, transparent);
+  outline-offset: 0.35rem;
+}
+
+.signal-disc::before,
+.signal-disc::after {
+  content: "";
+  position: absolute;
+  border-radius: inherit;
+  pointer-events: none;
+}
+
+.signal-disc::before {
+  inset: 8%;
+  background:
+    radial-gradient(circle at 50% 50%, transparent 0 38%, var(--radio-line) 38.5% 39%, transparent 39.5%),
+    radial-gradient(circle at 50% 50%, transparent 0 61%, color-mix(in oklab, var(--radio-accent) 15%, transparent) 61.5% 62%, transparent 62.5%),
+    radial-gradient(circle at 50% 50%, transparent 0 82%, color-mix(in oklab, var(--radio-warm) 18%, transparent) 82.5% 83%, transparent 83.5%);
+  opacity: 0.78;
+  transform: rotate(var(--needle-angle, -18deg));
+  transition: transform 1400ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.signal-disc::after {
+  inset: 17%;
+  background:
+    linear-gradient(125deg, rgba(255,255,255,0.42), transparent 34%),
+    radial-gradient(circle at 50% 45%, var(--radio-paper), transparent 62%);
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.2),
+    0 2rem 4.5rem color-mix(in oklab, var(--radio-ink) 6%, transparent);
+  opacity: 0.88;
+}
+
+.record-surface {
+  position: absolute;
+  inset: 15%;
+  z-index: 1;
+  border-radius: 999px;
+  background:
+    radial-gradient(circle at 50% 50%, transparent 0 24%, color-mix(in oklab, var(--radio-art-a) 8%, transparent) 24.5% 25%, transparent 25.5%),
+    repeating-radial-gradient(circle at 50% 50%, color-mix(in oklab, var(--radio-ink) 5%, transparent) 0 1px, transparent 1px 4px),
+    conic-gradient(from 25deg, color-mix(in oklab, var(--radio-art-a) 9%, transparent), transparent 17%, color-mix(in oklab, var(--radio-art-b) 12%, transparent), transparent 58%, color-mix(in oklab, var(--radio-art-c) 11%, transparent), transparent);
+  box-shadow:
+    inset 0 0 0 1px color-mix(in oklab, var(--radio-ink) 5%, transparent),
+    inset 0 0 3.5rem color-mix(in oklab, var(--radio-ink) 4%, transparent);
+  opacity: 0.72;
+  transform: rotate(0deg);
+  transition: opacity 800ms ease, filter 800ms ease, transform 1200ms cubic-bezier(0.22, 1, 0.36, 1);
+  animation: record-drift 112s linear infinite;
+  animation-play-state: paused;
+  pointer-events: none;
+}
+
+.signal-marker {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 39%;
+  height: 1px;
+  transform-origin: left center;
+  transform: rotate(var(--needle-angle, -16deg));
+  background: linear-gradient(90deg, var(--radio-warm), transparent);
+  opacity: 0.38;
+  z-index: 2;
+  transition: transform 1400ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.signal-core {
+  position: relative;
+  z-index: 3;
+  width: 5.85rem;
+  aspect-ratio: 1;
+  border-radius: 999px;
+  display: grid;
+  place-items: center;
+  background:
+    linear-gradient(145deg, rgba(255,255,255,0.5), transparent 34%),
+    color-mix(in oklab, var(--radio-bg) 86%, white);
+  border: 1px solid var(--radio-line);
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.28),
+    0 0.7rem 2.4rem color-mix(in oklab, var(--radio-ink) 8%, transparent);
+  overflow: hidden;
+}
+
+[data-theme="dark"] .signal-core {
+  background: color-mix(in oklab, var(--radio-bg) 88%, black);
+}
+
+.signal-bars {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.28rem;
+  height: 2rem;
+  color: var(--radio-accent);
+}
+
+.signal-bars span {
+  width: 0.24rem;
+  border-radius: 999px;
+  background: currentColor;
+  transform-origin: center;
+  opacity: 0.58;
+}
+
+.signal-bars span:nth-child(1) { height: 0.95rem; }
+.signal-bars span:nth-child(2) { height: 1.45rem; }
+.signal-bars span:nth-child(3) { height: 2rem; }
+.signal-bars span:nth-child(4) { height: 1.35rem; }
+.signal-bars span:nth-child(5) { height: 1rem; }
+
+.radio-page:not(.is-playing) .signal-bars {
+  opacity: 0.5;
+}
+
+.radio-page:not(.is-playing) .signal-bars span {
+  transform: scaleY(0.62);
+}
+
+.cover-art {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: inherit;
+  opacity: 0;
+  transform: scale(1.04);
+  transition: opacity 900ms ease, transform 1200ms cubic-bezier(0.16, 1, 0.3, 1), filter 900ms ease;
+}
+
+.signal-disc.has-cover .cover-art {
+  opacity: 0.82;
+  transform: scale(1);
+  filter: saturate(0.78) contrast(0.92);
+  animation: cover-drift 156s linear infinite;
+  animation-play-state: paused;
+}
+
+.signal-disc.has-cover .signal-bars {
+  opacity: 0;
+}
+
+.signal-disc.no-cover .signal-core {
+  background:
+    radial-gradient(circle at 32% 28%, rgba(255,255,255,0.38), transparent 30%),
+    linear-gradient(135deg, color-mix(in oklab, var(--radio-art-a) 22%, transparent), transparent 43%),
+    linear-gradient(315deg, color-mix(in oklab, var(--radio-art-b) 23%, transparent), transparent 46%),
+    color-mix(in oklab, var(--radio-bg) 85%, white);
+}
+
+.radio-page.is-playing .signal-disc {
+  animation: radio-breathe 24s ease-in-out infinite;
+}
+
+.radio-page.is-playing .record-surface {
+  animation-play-state: running;
+}
+
+.radio-page.is-playing .signal-disc.has-cover .cover-art {
+  animation-play-state: running;
+}
+
+.radio-page.is-playing .signal-bars span {
+  animation: slow-meter 5.8s ease-in-out infinite;
+}
+
+.radio-page.is-playing .signal-bars span:nth-child(2) { animation-delay: 0.42s; }
+.radio-page.is-playing .signal-bars span:nth-child(3) { animation-delay: 0.85s; }
+.radio-page.is-playing .signal-bars span:nth-child(4) { animation-delay: 1.2s; }
+.radio-page.is-playing .signal-bars span:nth-child(5) { animation-delay: 1.58s; }
+
+@keyframes radio-breathe {
+  0%, 100% { transform: scale(0.992); filter: saturate(0.96); }
+  50% { transform: scale(1.012); filter: saturate(1.04); }
+}
+
+@keyframes slow-meter {
+  0%, 100% { transform: scaleY(0.54); opacity: 0.46; }
+  45% { transform: scaleY(1); opacity: 0.86; }
+}
+
+@keyframes record-drift {
+  to { transform: rotate(360deg); }
+}
+
+@keyframes cover-drift {
+  from { transform: scale(1) rotate(0deg); }
+  to { transform: scale(1) rotate(360deg); }
+}
+
+.progress-panel {
+  display: grid;
+  gap: 0.32rem;
+  width: min(100%, 22.75rem);
+  margin: 0 auto;
+  opacity: 0.18;
+  transition: opacity 400ms ease;
+}
+
+.radio-page.is-playing .progress-panel {
+  opacity: 0.34;
+}
+
+.progress-panel:hover,
+.progress-panel:focus-within {
+  opacity: 0.82;
+}
+
+#progress-bar {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  height: 2px;
+  border-radius: 999px;
+  outline: none;
+  cursor: pointer;
+  background: linear-gradient(to right, var(--radio-accent) 0%, var(--radio-soft) 0%);
+}
+
+#progress-bar::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 0.68rem;
+  height: 0.68rem;
+  border-radius: 999px;
+  background: var(--radio-accent);
+  box-shadow: 0 2px 10px color-mix(in oklab, var(--radio-accent) 24%, transparent);
+}
+
+.time-row {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.66rem;
+  color: var(--radio-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.radio-controls {
+  position: relative;
+  display: grid;
+  grid-template-columns: repeat(4, 3.88rem);
+  justify-content: center;
+  align-items: center;
+  gap: 0.46rem;
+  width: max-content;
+  margin: 0.02rem auto 0;
+  padding: 0.15rem;
+  border-radius: 999px;
+  background: transparent;
+}
+
+.radio-button {
+  position: relative;
+  width: 3.88rem;
+  height: 3.48rem;
+  min-width: 3.88rem;
+  min-height: 3.48rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.32rem;
+  border: 0;
+  border-radius: 999px;
+  color: var(--radio-muted);
+  background: transparent;
+  font-size: 0.78rem;
+  font-weight: 650;
+  font-variant-numeric: tabular-nums;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  transition:
+    color 260ms ease,
+    background 360ms ease,
+    transform 260ms cubic-bezier(0.22, 1, 0.36, 1);
+  -webkit-tap-highlight-color: transparent;
+}
+
+.radio-button::before {
+  content: "";
+  position: absolute;
+  inset: 0.32rem 0.42rem;
+  border-radius: 999px;
+  background: color-mix(in oklab, var(--radio-ink) 4%, transparent);
+  opacity: 0;
+  transform: scale(0.76);
+  transition:
+    opacity 360ms ease,
+    transform 420ms cubic-bezier(0.22, 1, 0.36, 1),
+    background 360ms ease;
+}
+
+.radio-button svg {
+  position: relative;
+  z-index: 1;
+  width: 1.32rem;
+  height: 1.32rem;
+  stroke-width: 1.95;
+  transition: transform 420ms cubic-bezier(0.22, 1, 0.36, 1), fill 260ms ease;
+}
+
+.radio-button:hover {
+  color: var(--radio-ink);
+  background: transparent;
+}
+
+.radio-button:hover::before,
+.radio-button:focus-visible::before {
+  opacity: 1;
+  transform: scale(1);
+}
+
+.radio-button:active {
+  transform: scale(0.94);
+}
+
+.radio-button:focus-visible {
+  outline: 2px solid color-mix(in oklab, var(--radio-accent) 52%, transparent);
+  outline-offset: 0.16rem;
+}
+
+.radio-button.is-active {
+  color: var(--radio-accent);
+  background: transparent;
+}
+
+.radio-button.is-active::before {
+  opacity: 1;
+  transform: scale(1);
+  background: color-mix(in oklab, var(--radio-accent) 8%, transparent);
+}
+
+.radio-button.is-active::after {
+  content: "";
+  position: absolute;
+  bottom: 0.22rem;
+  width: 0.22rem;
+  height: 0.22rem;
+  border-radius: 999px;
+  background: currentColor;
+  opacity: 0.6;
+}
+
+.radio-button.is-settling svg {
+  animation: control-settle 620ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.radio-button span:not(.sr-only) {
+  position: relative;
+  z-index: 1;
+  min-width: 1.5rem;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+
+@keyframes control-settle {
+  0% { transform: scale(0.84); }
+  42% { transform: scale(1.16); }
+  100% { transform: scale(1); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .radio-page.is-playing .signal-disc,
+  .radio-page.is-playing .record-surface,
+  .radio-page.is-playing .signal-disc.has-cover .cover-art,
+  .radio-page.is-playing .signal-bars span,
+  .radio-page.is-changing-track .now-playing,
+  .radio-page.is-changing-track .signal-disc,
+  .radio-button.is-settling svg {
+    animation: none;
+  }
+}
+
+@media (max-width: 420px) {
+  .radio-page {
+    width: min(100% - 1.5rem, 31rem);
+    gap: clamp(0.46rem, 1.15dvh, 0.72rem);
+    padding-top: clamp(0.62rem, 1.6dvh, 1rem);
+    padding-bottom: max(5.55rem, calc(env(safe-area-inset-bottom) + 4.85rem));
+  }
+
+  .signal-disc {
+    width: min(82vw, 47dvh, 18rem);
+  }
+
+  .radio-controls {
+    grid-template-columns: repeat(4, 3.58rem);
+    gap: 0.34rem;
+  }
+
+  .radio-button {
+    width: 3.58rem;
+    min-width: 3.58rem;
+  }
+}
+
+/* Radio listening room — loaded after the legacy inline rules while the view evolves. */
+:root {
+  --radio-ease: cubic-bezier(.22, 1, .36, 1);
+  --radio-shadow: 0 2.2rem 5rem rgba(32, 35, 30, .16);
+}
+
+body:has([data-radio-root]) {
+  background: var(--radio-bg) !important;
+}
+
+.radio-page {
+  --room-video-opacity: .26;
+  --room-video-opacity-moving: .28;
+  --room-video-filter: saturate(.72) contrast(.95) brightness(.98);
+  --room-video-filter-moving: saturate(.76) contrast(.97) brightness(1);
+  --room-wash-left: 8%;
+  --room-wash-right: 30%;
+  --room-wash-top: 6%;
+  --room-wash-bottom: 16%;
+  --console-scrim-core: 48%;
+  --console-scrim-mid: 26%;
+  position: relative;
+  isolation: isolate;
+  width: 100%;
+  max-width: none;
+  height: 100dvh;
+  margin: 0;
+  padding: 0 max(1.25rem, env(safe-area-inset-right)) max(5.6rem, calc(4.8rem + env(safe-area-inset-bottom))) max(1.25rem, env(safe-area-inset-left));
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+}
+
+.radio-atmosphere {
+  position: fixed;
+  inset: 0;
+  z-index: -2;
+  overflow: hidden;
+  pointer-events: none;
+  background:
+    linear-gradient(130deg, rgba(255,255,255,.44), transparent 38%),
+    linear-gradient(315deg, color-mix(in oklab, var(--radio-art-c) 28%, transparent), transparent 52%),
+    var(--radio-bg);
+  transition: background 1.2s var(--radio-ease);
+}
+
+.radio-atmosphere-video,
+.radio-atmosphere-wash {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.radio-atmosphere-video {
+  z-index: 0;
+  object-fit: cover;
+  object-position: center;
+  opacity: var(--room-video-opacity);
+  filter: var(--room-video-filter);
+  transform: scale(1.025);
+  transition: opacity 1.4s var(--radio-ease), filter 1.4s var(--radio-ease);
+}
+
+.radio-atmosphere-wash {
+  z-index: 1;
+  background:
+    linear-gradient(90deg, color-mix(in oklab, var(--radio-bg) var(--room-wash-left), transparent), color-mix(in oklab, var(--radio-bg) var(--room-wash-right), transparent)),
+    linear-gradient(to bottom, color-mix(in oklab, var(--radio-bg) var(--room-wash-top), transparent), color-mix(in oklab, var(--radio-bg) var(--room-wash-bottom), transparent));
+}
+
+.radio-page.is-atmosphere-moving .radio-atmosphere-video {
+  opacity: var(--room-video-opacity-moving);
+  filter: var(--room-video-filter-moving);
+}
+
+.radio-page.is-room-off .radio-atmosphere-video,
+.radio-page.is-video-hidden .radio-atmosphere-video {
+  opacity: 0 !important;
+}
+
+[data-theme="dark"] .radio-atmosphere {
+  background:
+    linear-gradient(135deg, rgba(255,255,255,.035), transparent 38%),
+    linear-gradient(315deg, color-mix(in oklab, var(--radio-art-c) 15%, transparent), transparent 55%),
+    var(--radio-bg);
+}
+
+.radio-page.is-room-breeze {
+  --room-video-opacity: .36;
+  --room-video-opacity-moving: .38;
+  --room-video-filter: saturate(.78) contrast(.94) brightness(1.03);
+  --room-video-filter-moving: saturate(.8) contrast(.96) brightness(1.04);
+  --room-wash-left: 6%;
+  --room-wash-right: 24%;
+  --room-wash-top: 4%;
+  --room-wash-bottom: 12%;
+  --console-scrim-core: 44%;
+  --console-scrim-mid: 23%;
+}
+
+.radio-page.is-room-breeze .radio-atmosphere-video {
+  object-position: center 42%;
+}
+
+[data-theme="dark"] .radio-page {
+  --room-video-opacity: .35;
+  --room-video-opacity-moving: .37;
+  --room-video-filter: saturate(.76) contrast(1.01) brightness(.84);
+  --room-video-filter-moving: saturate(.78) contrast(1.02) brightness(.86);
+  --room-wash-left: 6%;
+  --room-wash-right: 26%;
+  --room-wash-top: 5%;
+  --room-wash-bottom: 14%;
+  --console-scrim-core: 52%;
+  --console-scrim-mid: 30%;
+}
+
+[data-theme="dark"] .radio-page.is-room-breeze {
+  --room-video-opacity: .45;
+  --room-video-opacity-moving: .47;
+  --room-video-filter: saturate(.78) contrast(1) brightness(.84);
+  --room-video-filter-moving: saturate(.8) contrast(1.01) brightness(.86);
+  --room-wash-left: 5%;
+  --room-wash-right: 22%;
+  --room-wash-top: 4%;
+  --room-wash-bottom: 11%;
+  --console-scrim-core: 48%;
+  --console-scrim-mid: 26%;
+}
+
+/* Live shader room: the canvas carries the scene, so the washes only protect legibility. */
+.radio-atmosphere-canvas {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  display: block;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  transition: opacity 1.6s var(--radio-ease);
+}
+
+.radio-page.is-scene-live .radio-atmosphere-canvas { opacity: 1; }
+.radio-page.is-scene-live .radio-atmosphere-video { opacity: 0 !important; }
+.radio-page.is-scene-live .radio-glow { opacity: .08; }
+.radio-page.is-scene-live .radio-grain { opacity: .025; }
+
+.radio-page.is-scene-live,
+[data-theme="dark"] .radio-page.is-scene-live {
+  --room-wash-left: 0%;
+  --room-wash-right: 14%;
+  --room-wash-top: 0%;
+  --room-wash-bottom: 8%;
+  --console-scrim-core: 40%;
+  --console-scrim-mid: 20%;
+}
+
+.radio-glow {
+  position: absolute;
+  z-index: 2;
+  width: min(62rem, 82vw);
+  aspect-ratio: 1;
+  border-radius: 50%;
+  filter: blur(2rem);
+  opacity: .25;
+  transition: background-color 1.2s var(--radio-ease), transform 1.2s var(--radio-ease);
+}
+
+.radio-glow-a {
+  left: -25vw;
+  top: -46%;
+  background: radial-gradient(circle, color-mix(in oklab, var(--radio-art-a) 44%, transparent), transparent 68%);
+}
+
+.radio-glow-b {
+  right: -29vw;
+  bottom: -52%;
+  background: radial-gradient(circle, color-mix(in oklab, var(--radio-art-b) 40%, transparent), transparent 68%);
+}
+
+.radio-grain {
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  opacity: .055;
+  mix-blend-mode: multiply;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 180 180' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.86' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='.75'/%3E%3C/svg%3E");
+}
+
+[data-theme="dark"] .radio-grain { opacity: .075; mix-blend-mode: screen; }
+
+.radio-layout {
+  width: min(100%, 67rem);
+  display: grid;
+  grid-template-columns: minmax(20rem, 1.08fr) minmax(19rem, .92fr);
+  align-items: center;
+  gap: clamp(3rem, 8vw, 8rem);
+}
+
+.signal-stage {
+  position: relative;
+  min-height: min(70dvh, 38rem);
+  display: grid;
+  place-items: center;
+}
+
+.signal-caption {
+  position: absolute;
+  top: 7%;
+  left: 2%;
+  right: 2%;
+  display: flex;
+  justify-content: space-between;
+  color: color-mix(in oklab, var(--radio-ink) 42%, transparent);
+  font: 600 .61rem/1 ui-monospace, SFMono-Regular, Menlo, monospace;
+  letter-spacing: .18em;
+}
+
+.signal-disc {
+  --disc-size: clamp(20rem, 37vw, 26.5rem);
+  position: relative;
+  width: var(--disc-size);
+  max-width: 100%;
+  aspect-ratio: 1;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  color: #f7f5ed;
+  background: transparent;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition: transform .65s var(--radio-ease), filter .65s var(--radio-ease);
+}
+
+.signal-disc::before {
+  content: "";
+  position: absolute;
+  inset: 8%;
+  z-index: -1;
+  border-radius: 50%;
+  background: rgba(22, 23, 20, .28);
+  box-shadow: var(--radio-shadow);
+  transform: translateY(1.4rem) scale(.91);
+  filter: blur(1.1rem);
+}
+
+.signal-disc::after { display: none; }
+
+.disc-halo {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  border: 1px solid color-mix(in oklab, var(--radio-art-a) 28%, transparent);
+  box-shadow: inset 0 0 0 1px rgba(255,255,255,.22);
+  opacity: .74;
+}
+
+.record-surface {
+  position: absolute;
+  inset: 6.5%;
+  border-radius: 50%;
+  overflow: hidden;
+  background:
+    radial-gradient(circle at 50% 50%, transparent 0 24%, rgba(255,255,255,.07) 24.3% 24.8%, transparent 25.1% 35%, rgba(255,255,255,.065) 35.2% 35.65%, transparent 35.9% 52%, rgba(255,255,255,.055) 52.2% 52.6%, transparent 52.9%),
+    repeating-radial-gradient(circle, rgba(255,255,255,.09) 0 1px, transparent 1.5px 4px),
+    conic-gradient(from 210deg, #11130f, color-mix(in oklab, var(--radio-art-a) 55%, #10110f) 18%, #171813 38%, color-mix(in oklab, var(--radio-art-b) 38%, #12130f) 57%, #0d0e0c 78%, #181a16);
+  box-shadow:
+    inset 0 0 0 1px rgba(255,255,255,.16),
+    inset 0 0 2.2rem rgba(0,0,0,.56),
+    0 1.4rem 3.8rem rgba(22,24,20,.25);
+  opacity: 1;
+}
+
+.record-surface::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: linear-gradient(112deg, transparent 18%, rgba(255,255,255,.22) 38%, transparent 46% 72%, rgba(255,255,255,.08) 84%, transparent);
+  mix-blend-mode: soft-light;
+}
+
+.signal-marker {
+  position: absolute;
+  width: 1px;
+  height: 42%;
+  top: 8%;
+  left: 50%;
+  z-index: 2;
+  transform-origin: 50% 100%;
+  transform: rotate(var(--needle-angle, -16deg));
+  background: linear-gradient(to bottom, transparent, rgba(255,255,255,.28), transparent 70%);
+  opacity: .65;
+  pointer-events: none;
+}
+
+.signal-core {
+  position: absolute;
+  width: 36%;
+  aspect-ratio: 1;
+  z-index: 3;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  border-radius: 50%;
+  background:
+    radial-gradient(circle at 34% 28%, rgba(255,255,255,.42), transparent 25%),
+    linear-gradient(145deg, var(--radio-art-c), color-mix(in oklab, var(--radio-art-a) 72%, var(--radio-art-c)));
+  box-shadow: 0 0 0 .28rem #171814, 0 0 0 .34rem rgba(255,255,255,.18), 0 .6rem 1.5rem rgba(0,0,0,.34);
+}
+
+.signal-core::after {
+  content: "";
+  position: absolute;
+  width: .48rem;
+  aspect-ratio: 1;
+  border-radius: 50%;
+  background: #ddd9cc;
+  box-shadow: inset 0 1px 2px rgba(0,0,0,.5);
+  opacity: .9;
+}
+
+.cover-art {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  opacity: 0;
+  filter: saturate(.86) contrast(1.02);
+}
+
+.signal-disc.has-cover .cover-art { opacity: 1; }
+.signal-disc.has-cover .cover-art { animation: none; transform: none; filter: saturate(.86) contrast(1.02); }
+.signal-disc.has-cover .signal-bars { opacity: 0; }
+
+.signal-bars {
+  display: flex;
+  height: 2.15rem;
+  align-items: center;
+  gap: .22rem;
+  color: rgba(245,244,236,.88);
+}
+
+.signal-bars > span {
+  width: 2px;
+  height: 45%;
+  border-radius: 99px;
+  background: currentColor;
+}
+.signal-bars > span:nth-child(2), .signal-bars > span:nth-child(4) { height: 76%; }
+.signal-bars > span:nth-child(3) { height: 100%; }
+
+.play-state {
+  position: absolute;
+  z-index: 5;
+  width: 4.2rem;
+  aspect-ratio: 1;
+  display: grid;
+  place-items: center;
+  border: 1px solid rgba(255,255,255,.48);
+  border-radius: 50%;
+  color: white;
+  background: rgba(16,18,15,.56);
+  box-shadow: 0 .6rem 1.5rem rgba(0,0,0,.24);
+  backdrop-filter: blur(10px);
+  opacity: .94;
+  transform: scale(1);
+  transition: opacity .35s ease, transform .5s var(--radio-ease), background .35s ease;
+}
+
+.play-state svg { position: absolute; width: 1.55rem; height: 1.55rem; fill: currentColor; }
+.play-symbol { margin-left: .16rem; }
+.pause-symbol { display: none; }
+.radio-page.is-playing .play-symbol { display: none; }
+.radio-page.is-playing .pause-symbol { display: block; }
+.radio-page.is-playing .play-state { opacity: 0; transform: scale(.84); }
+.radio-page.is-playing .signal-disc:hover .play-state,
+.radio-page.is-playing .signal-disc:focus-visible .play-state { opacity: .9; transform: scale(1); }
+
+.signal-disc:hover { transform: translateY(-.35rem); filter: saturate(1.05); }
+.signal-disc:hover .play-state { transform: scale(1.08); background: rgba(16,18,15,.68); }
+.signal-disc:active { transform: translateY(-.1rem) scale(.985); }
+.signal-disc:focus { outline: none; }
+.signal-disc:focus-visible .disc-halo {
+  border-color: var(--radio-accent);
+  box-shadow: 0 0 0 .28rem color-mix(in oklab, var(--radio-accent) 22%, transparent), inset 0 0 0 1px rgba(255,255,255,.25);
+}
+
+.radio-page.is-playing .record-surface,
+.radio-page.is-playing .signal-core { animation: radio-spin 26s linear infinite; }
+.radio-page.is-playing .signal-disc { animation: none; }
+
+.radio-page.is-buffering .disc-halo { animation: radio-breathe 1.5s ease-in-out infinite; }
+
+.signal-status {
+  position: absolute;
+  bottom: 6%;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: .48rem;
+  color: color-mix(in oklab, var(--radio-ink) 48%, transparent);
+  font: 650 .6rem/1 ui-monospace, SFMono-Regular, Menlo, monospace;
+  letter-spacing: .2em;
+}
+
+.signal-dot { width: .4rem; height: .4rem; border-radius: 50%; background: var(--radio-muted); }
+.radio-page.is-playing .signal-dot { background: #d85e45; box-shadow: 0 0 0 .25rem rgba(216,94,69,.12); }
+
+.radio-console {
+  position: relative;
+  isolation: isolate;
+  width: min(100%, 27rem);
+  display: grid;
+  gap: clamp(1.15rem, 2.8dvh, 1.8rem);
+}
+
+.radio-console::before {
+  content: "";
+  position: absolute;
+  inset: -4.75rem -6rem;
+  z-index: -1;
+  pointer-events: none;
+  background: radial-gradient(
+    ellipse at 61% 50%,
+    color-mix(in oklab, var(--radio-bg) var(--console-scrim-core), transparent) 0,
+    color-mix(in oklab, var(--radio-bg) var(--console-scrim-mid), transparent) 43%,
+    transparent 74%
+  );
+}
+
+.station-room-bar {
+  position: relative;
+  z-index: 8;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.station-chip {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: .7rem;
+  color: var(--radio-muted);
+  font-size: .72rem;
+  font-weight: 620;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+}
+
+.station-chip > span:last-child { overflow-wrap: anywhere; }
+.station-pulse { display: flex; align-items: center; gap: 2px; height: .8rem; color: var(--radio-accent); }
+.station-pulse i { display: block; width: 2px; height: 35%; border-radius: 2px; background: currentColor; }
+.station-pulse i:nth-child(2) { height: 90%; }
+.station-pulse i:nth-child(3) { height: 60%; }
+.radio-page.is-playing .station-pulse i { animation: station-wave .9s ease-in-out infinite alternate; }
+.radio-page.is-playing .station-pulse i:nth-child(2) { animation-delay: -.34s; }
+.radio-page.is-playing .station-pulse i:nth-child(3) { animation-delay: -.62s; }
+
+.room-picker {
+  position: relative;
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: .15rem;
+}
+
+.room-sound {
+  position: relative;
+  width: 2rem;
+  height: 2rem;
+  display: none;
+  place-items: center;
+  border: 0;
+  border-radius: 999px;
+  color: color-mix(in oklab, var(--radio-ink) 44%, transparent);
+  background: transparent;
+  cursor: pointer;
+  transition: color .25s ease, background .25s ease;
+}
+
+.radio-page.has-room-sound .room-sound { display: inline-grid; }
+
+.room-sound svg {
+  width: .95rem;
+  height: .95rem;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.room-sound[aria-pressed="true"] { color: var(--radio-accent); }
+
+.room-sound[aria-pressed="false"]::after {
+  content: "";
+  position: absolute;
+  width: 1.2rem;
+  height: 1.5px;
+  border-radius: 1px;
+  background: currentColor;
+  transform: rotate(-45deg);
+}
+
+.room-sound:hover {
+  color: var(--radio-ink);
+  background: color-mix(in oklab, var(--radio-paper) 66%, transparent);
+}
+
+.room-sound:focus-visible {
+  outline: 2px solid color-mix(in oklab, var(--radio-accent) 48%, transparent);
+  outline-offset: .12rem;
+}
+
+.room-trigger {
+  min-height: 2rem;
+  padding: .45rem .15rem .45rem .65rem;
+  display: inline-flex;
+  align-items: center;
+  gap: .48rem;
+  border: 0;
+  border-radius: 999px;
+  color: color-mix(in oklab, var(--radio-ink) 44%, transparent);
+  background: transparent;
+  font: 650 .59rem/1 ui-monospace, SFMono-Regular, Menlo, monospace;
+  letter-spacing: .16em;
+  white-space: nowrap;
+  transition: color .28s ease, background .28s ease;
+}
+
+.room-status-dot {
+  width: .34rem;
+  height: .34rem;
+  border-radius: 50%;
+  background: var(--radio-accent);
+  box-shadow: 0 0 0 .22rem color-mix(in oklab, var(--radio-accent) 10%, transparent);
+  transition: background .35s ease, box-shadow .35s ease;
+}
+
+.radio-page.is-room-off .room-status-dot {
+  background: transparent;
+  box-shadow: inset 0 0 0 1px var(--radio-muted);
+}
+
+.radio-page.is-room-breeze .room-status-dot {
+  background: var(--radio-warm);
+  box-shadow: 0 0 0 .22rem color-mix(in oklab, var(--radio-warm) 12%, transparent);
+}
+
+.room-trigger:hover,
+.room-trigger[aria-expanded="true"] {
+  color: var(--radio-ink);
+  background: color-mix(in oklab, var(--radio-paper) 66%, transparent);
+}
+
+.room-trigger:focus-visible {
+  outline: 2px solid color-mix(in oklab, var(--radio-accent) 48%, transparent);
+  outline-offset: .12rem;
+}
+
+.room-menu {
+  position: absolute;
+  top: calc(100% + .45rem);
+  right: 0;
+  width: 14.5rem;
+  max-height: min(34rem, calc(100dvh - 7rem));
+  overflow-y: auto;
+  padding: .38rem;
+  border: 1px solid var(--radio-line);
+  border-radius: 1rem;
+  background: color-mix(in oklab, var(--radio-bg) 88%, transparent);
+  box-shadow: 0 1.25rem 3rem rgba(24, 27, 23, .14);
+  backdrop-filter: blur(20px) saturate(1.08);
+  -webkit-backdrop-filter: blur(20px) saturate(1.08);
+  animation: room-menu-in .34s var(--radio-ease);
+}
+
+.room-menu[hidden] {
+  display: none;
+}
+
+.room-option {
+  position: relative;
+  width: 100%;
+  min-height: 2.7rem;
+  padding: .55rem 1.8rem .55rem .8rem;
+  display: grid;
+  grid-template-columns: 4.3rem 1fr;
+  align-items: center;
+  gap: .4rem;
+  border: 0;
+  border-radius: .72rem;
+  color: var(--radio-muted);
+  background: transparent;
+  text-align: left;
+  transition: color .24s ease, background .24s ease;
+}
+
+.room-option:hover,
+.room-option:focus-visible {
+  color: var(--radio-ink);
+  background: color-mix(in oklab, var(--radio-accent) 8%, transparent);
+  outline: none;
+}
+
+.room-option[aria-selected="true"] {
+  color: var(--radio-ink);
+}
+
+.room-option[aria-selected="true"]::after {
+  content: "";
+  position: absolute;
+  right: .85rem;
+  width: .38rem;
+  height: .38rem;
+  border-radius: 50%;
+  background: var(--radio-accent);
+}
+
+.room-option-key {
+  font: 700 .58rem/1 ui-monospace, SFMono-Regular, Menlo, monospace;
+  letter-spacing: .14em;
+}
+
+.room-option-name {
+  font-size: .72rem;
+  font-weight: 580;
+  letter-spacing: .01em;
+}
+
+@keyframes room-menu-in {
+  from { opacity: 0; transform: translateY(-.35rem) scale(.97); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.now-playing {
+  min-height: 8.7rem;
+  display: grid;
+  align-content: center;
+  gap: .38rem;
+  text-align: left;
+}
+
+.now-playing-label {
+  margin-bottom: .45rem;
+  color: color-mix(in oklab, var(--radio-ink) 34%, transparent);
+  font: 650 .6rem/1 ui-monospace, SFMono-Regular, Menlo, monospace;
+  letter-spacing: .18em;
+}
+
+.track-title {
+  max-width: 100%;
+  color: var(--radio-ink);
+  font-family: ui-serif, Georgia, "Times New Roman", serif;
+  font-size: clamp(2rem, 4vw, 3.55rem);
+  font-weight: 500;
+  line-height: 1.01;
+  letter-spacing: -.045em;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+  -webkit-line-clamp: 3;
+}
+
+.track-meta {
+  max-width: 100%;
+  margin-top: .3rem;
+  color: var(--radio-muted);
+  font-size: .88rem;
+  line-height: 1.45;
+  white-space: normal;
+  overflow: visible;
+  text-overflow: clip;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+.progress-panel { width: 100%; opacity: 1; }
+.radio-page.is-playing .progress-panel { opacity: 1; }
+.progress-panel input[type="range"] {
+  height: 3px;
+  padding: .65rem 0;
+  box-sizing: content-box;
+  background-clip: content-box !important;
+  opacity: .76;
+  cursor: pointer;
+  transition: opacity .25s ease;
+}
+.progress-panel input[type="range"]:hover,
+.progress-panel input[type="range"]:focus-visible { opacity: 1; }
+.progress-panel input[type="range"]::-webkit-slider-thumb {
+  width: .8rem;
+  height: .8rem;
+  border: 3px solid var(--radio-bg);
+  box-shadow: 0 0 0 1px var(--radio-accent), 0 2px 6px rgba(0,0,0,.18);
+}
+.time-row { margin-top: -.2rem; color: color-mix(in oklab, var(--radio-ink) 45%, transparent); font-size: .65rem; }
+
+.radio-controls {
+  display: grid;
+  grid-template-columns: repeat(4, 3.6rem);
+  justify-content: start;
+  gap: .65rem;
+}
+
+.radio-button {
+  width: 3.6rem;
+  min-width: 3.6rem;
+  height: 3.6rem;
+  border: 1px solid var(--radio-line);
+  background: color-mix(in oklab, var(--radio-paper) 76%, transparent);
+  box-shadow: 0 .5rem 1.3rem rgba(28,31,27,.045);
+  backdrop-filter: blur(12px);
+}
+
+.radio-button::before { background: color-mix(in oklab, var(--radio-accent) 9%, transparent); }
+.radio-button:hover { border-color: color-mix(in oklab, var(--radio-accent) 35%, var(--radio-line)); transform: translateY(-2px); }
+.radio-button.is-primary {
+  color: color-mix(in oklab, var(--radio-accent) 82%, var(--radio-ink));
+  border-color: color-mix(in oklab, var(--radio-accent) 25%, var(--radio-line));
+  background: color-mix(in oklab, var(--radio-accent) 10%, var(--radio-paper));
+}
+
+#btn-encore svg {
+  width: 1.48rem;
+  height: 1.48rem;
+}
+
+#btn-encore .encore-count {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  z-index: 2;
+  width: .68rem;
+  height: .68rem;
+  min-width: 0;
+  display: grid;
+  place-items: center;
+  margin: 0;
+  color: currentColor;
+  font: 760 .5rem/1 ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0;
+  transform: translate(-50%, -48%);
+  animation: encore-count-in .42s var(--radio-ease);
+}
+
+#btn-encore .encore-count:empty { display: none; }
+#btn-encore.is-active::after { display: none; }
+
+@keyframes radio-spin { to { transform: rotate(360deg); } }
+@keyframes radio-breathe { 50% { opacity: .38; transform: scale(1.018); } }
+@keyframes station-wave { to { height: 100%; } }
+@keyframes encore-count-in {
+  from { opacity: 0; transform: translate(-50%, -48%) scale(.62); }
+  to { opacity: 1; transform: translate(-50%, -48%) scale(1); }
+}
+
+@media (max-width: 840px) {
+  .radio-page {
+    --room-video-opacity: .23;
+    --room-video-opacity-moving: .25;
+    --mobile-wash-center: 36%;
+    --mobile-wash-edge: 10%;
+    --mobile-wash-top: 9%;
+    --mobile-wash-bottom: 20%;
+    --console-scrim-core: 54%;
+    --console-scrim-mid: 30%;
+  }
+  .radio-page.is-room-breeze {
+    --room-video-opacity: .31;
+    --room-video-opacity-moving: .33;
+    --mobile-wash-center: 32%;
+    --mobile-wash-edge: 8%;
+    --mobile-wash-top: 7%;
+    --mobile-wash-bottom: 16%;
+    --console-scrim-core: 50%;
+    --console-scrim-mid: 27%;
+  }
+  [data-theme="dark"] .radio-page {
+    --room-video-opacity: .31;
+    --room-video-opacity-moving: .33;
+    --mobile-wash-center: 32%;
+    --mobile-wash-edge: 8%;
+    --mobile-wash-top: 7%;
+    --mobile-wash-bottom: 17%;
+    --console-scrim-core: 56%;
+    --console-scrim-mid: 33%;
+  }
+  [data-theme="dark"] .radio-page.is-room-breeze {
+    --room-video-opacity: .39;
+    --room-video-opacity-moving: .41;
+    --mobile-wash-center: 28%;
+    --mobile-wash-edge: 7%;
+    --mobile-wash-top: 6%;
+    --mobile-wash-bottom: 14%;
+    --console-scrim-core: 52%;
+    --console-scrim-mid: 29%;
+  }
+  .radio-atmosphere-wash,
+  [data-theme="dark"] .radio-atmosphere-wash {
+    background:
+      radial-gradient(ellipse at 50% 54%, color-mix(in oklab, var(--radio-bg) var(--mobile-wash-center), transparent), color-mix(in oklab, var(--radio-bg) var(--mobile-wash-edge), transparent) 72%),
+      linear-gradient(to bottom, color-mix(in oklab, var(--radio-bg) var(--mobile-wash-top), transparent), color-mix(in oklab, var(--radio-bg) var(--mobile-wash-bottom), transparent));
+  }
+  .radio-page { padding-top: max(.65rem, env(safe-area-inset-top)); }
+  .radio-layout {
+    width: min(100%, 32rem);
+    grid-template-columns: 1fr;
+    gap: clamp(.55rem, 1.6dvh, 1.05rem);
+  }
+  .signal-stage { min-height: 0; }
+  .signal-caption { display: none; }
+  .signal-disc { --disc-size: min(72vw, 44dvh, 20.5rem); }
+  .signal-status { bottom: -.1rem; }
+  .radio-console { width: 100%; gap: clamp(.55rem, 1.4dvh, .9rem); text-align: center; }
+  .station-room-bar { width: min(100%, 23rem); margin-inline: auto; }
+  /* Seven rooms do not fit below the trigger on a phone; there is room above it. */
+  .room-menu { top: auto; bottom: calc(100% + .45rem); text-align: left; }
+  .now-playing { min-height: 4.8rem; text-align: center; gap: .15rem; }
+  .now-playing-label { display: none; }
+  .track-title { font-family: inherit; font-size: clamp(1.15rem, 5vw, 1.55rem); font-weight: 640; line-height: 1.2; letter-spacing: -.025em; -webkit-line-clamp: 2; }
+  .track-meta { margin-top: .08rem; font-size: .76rem; }
+  .radio-controls { justify-content: center; }
+}
+
+@media (max-width: 420px) {
+  .radio-page {
+    width: 100%;
+    padding-inline: 1rem;
+    padding-bottom: max(5.35rem, calc(4.65rem + env(safe-area-inset-bottom)));
+  }
+  .radio-layout { width: 100%; gap: clamp(.45rem, 1.15dvh, .7rem); }
+  .signal-disc { --disc-size: min(76vw, 42dvh, 18.2rem); }
+  .signal-status { font-size: .54rem; }
+  .radio-console { gap: clamp(.42rem, 1.05dvh, .72rem); }
+  .station-chip { font-size: .64rem; }
+  .now-playing { min-height: 4.15rem; }
+  .progress-panel { width: min(100%, 23rem); margin-inline: auto; }
+  .radio-controls { grid-template-columns: repeat(4, 3.35rem); gap: .36rem; }
+  .radio-button { width: 3.35rem; min-width: 3.35rem; height: 3.35rem; }
+}
+
+@media (max-height: 680px) and (max-width: 840px) {
+  .station-room-bar, .signal-status { display: none; }
+  .signal-disc { --disc-size: min(64vw, 39dvh, 16rem); }
+  .now-playing { min-height: 3.75rem; }
+}
+
+@media (max-width: 840px) {
+  .radio-page.is-scene-live,
+  [data-theme="dark"] .radio-page.is-scene-live {
+    --mobile-wash-center: 22%;
+    --mobile-wash-edge: 4%;
+    --mobile-wash-top: 4%;
+    --mobile-wash-bottom: 12%;
+    --console-scrim-core: 46%;
+    --console-scrim-mid: 24%;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .radio-atmosphere-video,
+  .radio-atmosphere-canvas { transition: none; }
+  .radio-page.is-playing .record-surface,
+  .radio-page.is-playing .signal-core,
+  .radio-page.is-playing .station-pulse i,
+  .radio-page.is-buffering .disc-halo,
+  #btn-encore .encore-count,
+  .room-menu { animation: none; }
+  .signal-disc, .play-state, .radio-glow { transition-duration: .01ms; }
+}

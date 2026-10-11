@@ -1,0 +1,202 @@
+import datetime
+import math
+import random
+
+from spooly.services.library import LibraryService, VIDEO_EXTENSIONS
+from spooly.services.favorites import FavoriteService
+
+# Media this old, and not shown for as long, counts as forgotten.
+FORGOTTEN_DAYS = 180
+
+
+def _parse_shown_at(value: object) -> datetime.datetime | None:
+    if not value:
+        return None
+    try:
+        return datetime.datetime.fromisoformat(str(value).replace('Z', '+00:00')).replace(tzinfo=None)
+    except (TypeError, ValueError):
+        return None
+
+
+def shown_within(profile: dict | None, days: float, now: datetime.datetime) -> bool:
+    shown = _parse_shown_at((profile or {}).get('last_shown_at'))
+    return bool(shown and (now - shown).total_seconds() < days * 86400)
+
+
+class RecommendService:
+    def __init__(
+        self,
+        library_service: LibraryService,
+        favorite_service: FavoriteService,
+        activity_store=None,
+        media_index=None,
+    ):
+        self.library = library_service
+        self.favorites = favorite_service
+        self.activity_store = activity_store
+        self.media_index = media_index
+
+    def get_weighted_selection(self, file_type='video', limit=20, seed=None) -> list[str]:
+        """Get intelligent random selection of files."""
+        if self.media_index:
+            candidates = [
+                {'uri': item['name'], 'mtime': item['mtime_ts']}
+                for item in self.media_index.records(media_type=file_type)
+            ]
+        elif file_type == 'video':
+            candidates = [
+                {'uri': self.library.get_relative_path(path), 'mtime': path.stat().st_mtime}
+                for path in self.library.scan_videos()
+            ]
+        else:
+            candidates = [
+                {'uri': self.library.get_relative_path(path), 'mtime': path.stat().st_mtime}
+                for path in self.library.scan_images()
+            ]
+        if not candidates:
+            return []
+
+        favs = self.favorites.load()
+        names = [item['uri'] for item in candidates]
+        profiles = self.activity_store.profiles_for(names) if self.activity_store else {}
+        dimension_scores = self.activity_store.dimension_scores() if self.activity_store else {}
+        now = datetime.datetime.now()
+        weighted_pool: list[dict] = []
+
+        for candidate in candidates:
+            try:
+                rel_path = candidate['uri']
+                mtime = candidate['mtime']
+                is_fav = self.library.is_uri_in_set(rel_path, favs)
+                base_score = 2.0 if is_fav else 1.0
+                age_days = max((now - datetime.datetime.fromtimestamp(mtime)).total_seconds() / 86400, 0.0)
+                time_score = math.exp(-age_days / 180.0)
+                profile = profiles.get(rel_path) or {}
+                affinity = max(-1.0, min(float(profile.get('affinity_score') or 0.0), 1.8))
+                revisit_score = max(0.65, 1.0 + affinity * 0.2)
+                recent_penalty = self._recent_view_weight(profile.get('last_shown_at'), now)
+                dimensions = self.activity_store.dimensions_for(rel_path, file_type) if self.activity_store else []
+                preference_score = sum(dimension_scores.get(dimension, 0.0) for dimension in dimensions)
+                preference_weight = max(0.8, min(1.25, 1.0 + preference_score * 0.08))
+                weighted_pool.append({
+                    'uri': rel_path,
+                    'weight': base_score * (0.25 + time_score) * revisit_score * recent_penalty * preference_weight,
+                    'impressions': int(profile.get('impressions') or 0),
+                    'dimensions': dict(dimensions),
+                })
+            except Exception:
+                continue
+
+        rng = random.Random(seed) if seed else random
+        result: list[str] = []
+        recent_dimensions: list[dict[str, str]] = []
+        pool = weighted_pool[:]
+        while pool and len(result) < limit:
+            if len(result) % 4 == 3:
+                least_seen = sorted(pool, key=lambda item: item['impressions'])
+                exploration_pool = least_seen[:max(1, len(least_seen) // 3)]
+                varied = [item for item in exploration_pool if self._diversity_weight(item, recent_dimensions) >= 1.0]
+                if varied:
+                    exploration_pool = varied
+                chosen = rng.choice(exploration_pool)
+            else:
+                weighted = [
+                    (item, item['weight'] * self._diversity_weight(item, recent_dimensions))
+                    for item in pool
+                ]
+                total_weight = sum(weight for _, weight in weighted)
+                if total_weight <= 0:
+                    break
+                pick = rng.random() * total_weight
+                current = 0.0
+                chosen = weighted[-1][0]
+                for item, weight in weighted:
+                    current += weight
+                    if current >= pick:
+                        chosen = item
+                        break
+
+            result.append(chosen['uri'])
+            recent_dimensions = (recent_dimensions + [chosen['dimensions']])[-3:]
+            pool.remove(chosen)
+        return result
+
+    def get_forgotten_selection(self, file_type='video', limit=20, seed=None) -> list[str]:
+        """Old media not shown for a long time; what was once finished, replayed or favorited comes first."""
+        if not self.media_index:
+            return []
+        now = datetime.datetime.now()
+        cutoff = now.timestamp() - FORGOTTEN_DAYS * 86400
+        names = [
+            item['name'] for item in self.media_index.records(media_type=file_type)
+            if 0 < float(item.get('mtime_ts') or 0) <= cutoff
+        ]
+        profiles = self.activity_store.profiles_for(names) if self.activity_store else {}
+        favs = self.favorites.load()
+        rng = random.Random(seed) if seed else random
+        keyed = []
+        for name in names:
+            profile = profiles.get(name) or {}
+            if shown_within(profile, FORGOTTEN_DAYS, now):
+                continue
+            loved = profile.get('completes') or profile.get('replays') or self.library.is_uri_in_set(name, favs)
+            # Weighted shuffle: a larger weight pulls the random key toward 1.
+            keyed.append((rng.random() ** (1 / (3.0 if loved else 1.0)), name))
+        keyed.sort(reverse=True)
+        return [name for _, name in keyed[:limit]]
+
+    @staticmethod
+    def _diversity_weight(candidate: dict, recent: list[dict[str, str]]) -> float:
+        dimensions = candidate.get('dimensions') or {}
+        directory = dimensions.get('directory')
+        source = dimensions.get('source')
+        directory_count = sum(1 for item in recent if directory and item.get('directory') == directory)
+        source_count = sum(1 for item in recent if source and item.get('source') == source)
+        weight = 0.35 if directory_count >= 2 else 1.0
+        if source_count >= 3:
+            weight *= 0.5
+        return weight
+
+    def reasons_for(self, uris: list[str]) -> dict[str, str]:
+        """Return a short, user-facing explanation for each selected item."""
+        profiles = self.activity_store.profiles_for(uris) if self.activity_store else {}
+        dimension_scores = self.activity_store.dimension_scores() if self.activity_store else {}
+        favorites = self.favorites.load()
+        now = datetime.datetime.now().timestamp()
+        reasons: dict[str, str] = {}
+        for uri in uris:
+            profile = profiles.get(uri) or {}
+            path = self.library.resolve_path(uri)
+            media_type = str(profile.get('media_type') or '')
+            if not media_type:
+                media_type = 'video' if path and path.suffix.lower() in VIDEO_EXTENSIONS else 'image'
+            if self.library.is_uri_in_set(uri, favorites):
+                reasons[uri] = 'From your favorites'
+            elif self.activity_store and any(
+                dimension_scores.get(dimension, 0.0) >= 0.15
+                for dimension in self.activity_store.dimensions_for(uri, media_type)
+            ):
+                reasons[uri] = 'Matches your browsing preferences'
+            elif int(profile.get('impressions') or 0) == 0:
+                reasons[uri] = 'Random discovery'
+            else:
+                try:
+                    age_days = max((now - path.stat().st_mtime) / 86400, 0.0) if path else 999
+                except OSError:
+                    age_days = 999
+                reasons[uri] = 'Recently added' if age_days <= 30 else 'Not viewed recently'
+        return reasons
+
+    @staticmethod
+    def _recent_view_weight(value: object, now: datetime.datetime) -> float:
+        shown = _parse_shown_at(value)
+        if not shown:
+            return 1.0
+        hours = max((now - shown).total_seconds() / 3600, 0.0)
+        if hours < 6:
+            return 0.12
+        if hours < 48:
+            return 0.35
+        if hours < 24 * 14:
+            return 0.7
+        return 1.0

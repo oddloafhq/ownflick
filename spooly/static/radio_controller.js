@@ -1,0 +1,1191 @@
+(function () {
+  'use strict';
+
+  var STATION_KEY = 'radio_station';
+  var RECENT_KEY = 'radio_recent_tracks';
+  var POSITION_KEY = 'radio_position';
+  var ROOM_KEY = 'radio_room';
+  var ROOM_SOUND_KEY = 'radio_room_sound';
+  var SLEEP_AMBIENCE_TAIL = 25;
+  var SLEEP_OPTIONS = [null, 30, 60, 120];
+  var MAX_ENCORE_COUNT = 3;
+  // scene: a live shader room (its .frag URL is on the canvas as data-shader-<room>);
+  // sourceKey: the video shown by video rooms, and the fallback when WebGL fails;
+  // sound: the ambience profile mixed beside the music;
+  // event: the scene's rare moment (see radio_scene.js), paired with a sound when it has one.
+  var ROOMS = {
+    glass: {
+      label: 'ROOM · GLASS',
+      ariaLabel: 'Ambience: rain on glass. Click to select.',
+      sourceKey: 'Rain',
+      scene: true,
+      sound: 'rain',
+      event: 'lightning',
+    },
+    snow: {
+      label: 'ROOM · SNOW',
+      ariaLabel: 'Ambience: snowy night. Click to select.',
+      sourceKey: '',
+      scene: true,
+      sound: 'snow',
+      event: 'car',
+    },
+    hearth: {
+      label: 'ROOM · HEARTH',
+      ariaLabel: 'Ambience: by the fire. Click to select.',
+      sourceKey: '',
+      scene: true,
+      sound: 'fire',
+      event: 'burst',
+    },
+    firefly: {
+      label: 'ROOM · FIREFLY',
+      ariaLabel: 'Ambience: summer night with fireflies. Click to select.',
+      sourceKey: '',
+      scene: true,
+      sound: 'night',
+      event: 'meteor',
+    },
+    rain: {
+      label: 'ROOM · RAIN',
+      ariaLabel: 'Ambience: rainy night. Click to select.',
+      sourceKey: 'Rain',
+      sound: 'rain',
+    },
+    breeze: {
+      label: 'ROOM · BREEZE',
+      ariaLabel: 'Ambience: afternoon breeze. Click to select.',
+      sourceKey: 'Breeze',
+    },
+    off: {
+      label: 'ROOM · OFF',
+      ariaLabel: 'Ambience: off. Click to select.',
+      sourceKey: '',
+    },
+  };
+
+  var audio = new Audio();
+  var stations = [];
+  var stationId = localStorage.getItem(STATION_KEY) || 'default';
+  var upcoming = [];
+  var recent = normalizeRecent(readJson(RECENT_KEY, []));
+  var currentTrack = null;
+  var isPlaying = false;
+  var sleepIndex = 0;
+  var sleepEnd = null;
+  var sleepTickId = null;
+  var encoreRemaining = 0;
+  var saveTick = 0;
+  var mediaPositionTick = 0;
+  var artLoadToken = 0;
+  var trackPlayReportedFor = '';
+  var trackExitReportedFor = '';
+  var trackInfoTimers = [];
+  var pendingTrackTitle = '';
+  var pendingTrackMeta = '';
+  var trackInfoTransitionId = 0;
+  var metadataLoadToken = 0;
+  var roomId = normalizeRoom(localStorage.getItem(ROOM_KEY));
+  var atmosphereMotionQuery = window.matchMedia('(prefers-reduced-motion: reduce)');
+  var scene = null;
+  var sceneFailed = false;
+  var scenePalette = null;
+  var sceneCover = null;
+  var roomSoundOn = localStorage.getItem(ROOM_SOUND_KEY) !== 'off';
+  var ambience = window.RadioAmbience ? window.RadioAmbience.create() : null;
+  var sleepFading = false;
+  var trackEnergy = null;
+  var energyTrackName = '';
+
+  var els = {};
+
+  var ICONS = {
+    heart: '<svg xmlns="http://www.w3.org/2000/svg" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path></svg>',
+    heartFilled: '<svg xmlns="http://www.w3.org/2000/svg" width="17" height="17" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path></svg>',
+    repeat: '<svg xmlns="http://www.w3.org/2000/svg" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="17 1 21 5 17 9"></polyline><path d="M3 11V9a4 4 0 0 1 4-4h14"></path><polyline points="7 23 3 19 7 15"></polyline><path d="M21 13v2a4 4 0 0 1-4 4H3"></path></svg>',
+    moon: '<svg xmlns="http://www.w3.org/2000/svg" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>',
+  };
+
+  function init() {
+    cacheEls();
+    bindEvents();
+    initAtmosphere();
+    initAmbience();
+    updateSignalArt(null);
+    replaceFeather();
+    loadStations()
+      .then(function () { return tune({ reset: true, loadFirst: true }); })
+      .catch(showLoadError);
+  }
+
+  function cacheEls() {
+    [
+      'radio-page', 'station-name', 'track-title', 'track-meta',
+      'progress-bar', 'time-current', 'time-total', 'btn-play', 'btn-next',
+      'btn-fav', 'btn-encore', 'encore-count', 'btn-sleep', 'sleep-label',
+      'btn-room', 'btn-room-sound', 'room-label', 'room-menu',
+      'station-options', 'upcoming-preview', 'upcoming-list', 'cover-wave', 'cover-art',
+      'radio-atmosphere-video', 'radio-atmosphere-canvas'
+    ].forEach(function (id) {
+      els[toCamel(id)] = document.getElementById(id);
+    });
+    els.roomOptions = Array.from(document.querySelectorAll('[data-room]'));
+  }
+
+  function bindEvents() {
+    audio.addEventListener('ended', function () {
+      reportPlaybackExit('complete');
+      if (encoreRemaining > 0) {
+        replayCurrentTrack();
+        return;
+      }
+      playNext(true);
+    });
+    audio.addEventListener('error', function () {
+      isPlaying = false;
+      updatePlayIcon();
+      updateMotion();
+      reportPlaybackExit('error');
+      resetEncore();
+      playNext(true);
+    });
+    audio.addEventListener('play', function () {
+      isPlaying = true;
+      setBuffering(false);
+      reportTrackPlay();
+      updatePlayIcon();
+      updateMotion();
+      updateMediaSession();
+      updateMediaPosition();
+    });
+    audio.addEventListener('pause', function () {
+      isPlaying = false;
+      setBuffering(false);
+      updatePlayIcon();
+      updateMotion();
+      savePosition();
+      updateMediaSessionState();
+      updateMediaPosition();
+    });
+    audio.addEventListener('timeupdate', onTimeUpdate);
+    audio.addEventListener('loadstart', function () { setBuffering(true); });
+    audio.addEventListener('waiting', function () { setBuffering(true); });
+    audio.addEventListener('canplay', function () { setBuffering(false); });
+    audio.addEventListener('playing', function () { setBuffering(false); });
+    audio.addEventListener('loadedmetadata', function () {
+      restoreSavedTimeOnce();
+      onTimeUpdate();
+      updateMediaPosition();
+    });
+    document.addEventListener('visibilitychange', syncAtmosphere);
+    // Safari only starts Web Audio from a gesture, so unlock on any tap or key press.
+    document.addEventListener('pointerdown', unlockAmbience, true);
+    document.addEventListener('keydown', unlockAmbience, true);
+    els.btnRoomSound.addEventListener('click', toggleRoomSound);
+    window.addEventListener('spooly:theme-changed', function () {
+      if (scene) scene.setDark(isDarkTheme());
+    });
+
+    els.btnPlay.addEventListener('click', togglePlay);
+    els.btnNext.addEventListener('click', function () { playNext(true, { manual: true }); });
+    els.btnFav.addEventListener('click', toggleFavorite);
+    els.btnEncore.addEventListener('click', cycleEncore);
+    els.btnSleep.addEventListener('click', cycleSleep);
+    els.btnRoom.addEventListener('click', function (event) {
+      event.stopPropagation();
+      toggleRoomMenu();
+    });
+    els.roomOptions.forEach(function (option) {
+      option.addEventListener('click', function () {
+        setRoom(option.dataset.room);
+        closeRoomMenu();
+        els.btnRoom.focus();
+      });
+    });
+    document.addEventListener('click', function (event) {
+      if (!(event.target instanceof Element) || !event.target.closest('.room-picker')) {
+        closeRoomMenu();
+      }
+    });
+    document.addEventListener('keydown', function (event) {
+      if (event.key === 'Escape') {
+        closeRoomMenu();
+        els.btnRoom.focus();
+      }
+    });
+    els.progressBar.addEventListener('input', function (event) {
+      var duration = playableDuration();
+      if (!duration) return;
+      audio.currentTime = (Number(event.target.value) / 100) * duration;
+      updateMediaPosition();
+    });
+  }
+
+  function loadStations() {
+    return fetch('/api/radio/stations')
+      .then(readApi)
+      .then(function (data) {
+        stations = data.stations || [];
+        if (!stations.some(function (station) { return station.id === stationId; })) {
+          stationId = 'default';
+        }
+        renderStations();
+        updateStationText();
+      })
+      .catch(function () {
+        stations = [{ id: 'default', name: 'Default Station', description: '' }];
+        stationId = 'default';
+        updateStationText();
+      });
+  }
+
+  function tune(options) {
+    options = options || {};
+    if (options.reset) {
+      upcoming = [];
+    }
+    var exclude = buildExclude();
+    var url = '/api/radio/tune?station=' + encodeURIComponent(stationId)
+      + '&limit=12'
+      + '&exclude=' + encodeURIComponent(exclude.join(','));
+
+    return fetch(url)
+      .then(readApi)
+      .then(function (data) {
+        var incoming = data.items || [];
+        appendUpcoming(incoming);
+        loadFirstIfNeeded(options);
+      })
+      .catch(function () {
+        return fetch('/api/radio/items?limit=200')
+          .then(readApi)
+          .then(function (data) {
+            appendUpcoming(shuffleTracks(data.items || []));
+            loadFirstIfNeeded(options);
+          });
+      });
+  }
+
+  function appendUpcoming(items) {
+    var known = new Set(upcoming.map(function (item) { return item.name; }));
+    items.forEach(function (item) {
+      if (!known.has(item.name) && (!currentTrack || item.name !== currentTrack.name)) {
+        upcoming.push(item);
+        known.add(item.name);
+      }
+    });
+    renderUpcoming();
+  }
+
+  function loadFirstIfNeeded(options) {
+    if (options.loadFirst && !currentTrack) {
+      prepareTrack(upcoming.shift() || null);
+      renderUpcoming();
+    }
+  }
+
+  function shuffleTracks(items) {
+    var copy = items.slice();
+    for (var i = copy.length - 1; i > 0; i -= 1) {
+      var j = Math.floor(Math.random() * (i + 1));
+      var tmp = copy[i];
+      copy[i] = copy[j];
+      copy[j] = tmp;
+    }
+    return copy;
+  }
+
+  function buildExclude() {
+    recent = normalizeRecent(recent);
+    var names = recent.slice(-30);
+    if (currentTrack) names.push(currentTrack.name);
+    upcoming.forEach(function (item) { names.push(item.name); });
+    return Array.from(new Set(names.filter(Boolean)));
+  }
+
+  function prepareTrack(track) {
+    if (!track || !currentTrack || currentTrack.name !== track.name) {
+      resetEncore();
+    }
+    currentTrack = track;
+    metadataLoadToken += 1;
+    if (!track) {
+      audio.removeAttribute('src');
+      clearTrackInfoTimers();
+      els.radioPage.classList.remove('is-changing-track', 'is-buffering', 'has-error');
+      setTrackInfo('No audio available', '');
+      updateSignalArt(null);
+      updateFavorite();
+      updateMediaSession();
+      loadEnergy();
+      return;
+    }
+
+    els.radioPage.classList.remove('has-error');
+    setBuffering(true);
+    audio.src = track.media_url;
+    trackPlayReportedFor = '';
+    trackExitReportedFor = '';
+    transitionTrackInfo(track.title || 'Untitled audio', buildTrackMeta(track));
+    setNeedle();
+    updateSignalArt(track);
+    loadEnergy();
+    updateFavorite();
+    updateMediaSession();
+    loadTrackMetadata(track);
+  }
+
+  function playTrack(track) {
+    if (!track) return Promise.resolve();
+    prepareTrack(track);
+    rememberRecent(track.name);
+    return audio.play().catch(function () {
+      isPlaying = false;
+      reportPlaybackExit('error');
+      updatePlayIcon();
+    });
+  }
+
+  function playNext(autoplay, options) {
+    options = options || {};
+    if (options.manual) {
+      reportPlaybackExit('skip');
+      settleControl(els.btnNext);
+    }
+    resetEncore();
+    if (!upcoming.length) {
+      return tune({ reset: false }).then(function () {
+        if (!upcoming.length) {
+          prepareTrack(null);
+          return;
+        }
+        return playNext(autoplay);
+      });
+    }
+    var next = upcoming.shift();
+    renderUpcoming();
+    if (upcoming.length < 3) tune({ reset: false });
+    return autoplay ? playTrack(next) : (prepareTrack(next), Promise.resolve());
+  }
+
+  function togglePlay() {
+    if (!currentTrack) {
+      playNext(true);
+      return;
+    }
+    if (isPlaying) {
+      audio.pause();
+    } else {
+      rememberRecent(currentTrack.name);
+      audio.play().catch(function () {});
+    }
+  }
+
+  function toggleFavorite() {
+    if (!currentTrack || els.btnFav.disabled) return;
+    var track = currentTrack;
+    var ratio = playbackRatio();
+    els.btnFav.disabled = true;
+    fetch('/api/favorite/' + encodeURIComponent(track.name), { method: 'POST' })
+      .then(async function (response) {
+        var data = await response.json();
+        if (!response.ok || typeof data.favorite !== 'boolean') throw new Error('Failed to update favorite');
+        track.is_favorite = data.favorite;
+        if (currentTrack === track) updateFavorite();
+        if (track.is_favorite) reportFeedback('favorite', track, ratio);
+        settleControl(els.btnFav);
+      })
+      .catch(function () {
+        if (currentTrack === track) {
+          els.btnFav.title = 'Favorite was not saved. Please try again.';
+          els.btnFav.setAttribute('aria-label', els.btnFav.title);
+        }
+      })
+      .finally(function () { els.btnFav.disabled = false; });
+  }
+
+  function cycleEncore() {
+    if (!currentTrack) return;
+    encoreRemaining = (encoreRemaining + 1) % (MAX_ENCORE_COUNT + 1);
+    updateEncore();
+    settleControl(els.btnEncore);
+  }
+
+  function resetEncore() {
+    if (!encoreRemaining) return;
+    encoreRemaining = 0;
+    updateEncore();
+  }
+
+  function replayCurrentTrack() {
+    if (!currentTrack || encoreRemaining <= 0) {
+      playNext(true);
+      return;
+    }
+    var replayedTrack = currentTrack;
+    encoreRemaining -= 1;
+    updateEncore();
+    audio.currentTime = 0;
+    savePosition();
+    audio.play()
+      .then(function () {
+        reportFeedback('replay', replayedTrack, 1);
+      })
+      .catch(function () {
+        if (currentTrack && currentTrack.name === replayedTrack.name) {
+          resetEncore();
+        }
+      });
+  }
+
+  function updateEncore() {
+    if (!els.btnEncore) return;
+    var active = encoreRemaining > 0;
+    var countText = active ? String(encoreRemaining) : '';
+    var label = 'Play again';
+    if (active) {
+      label = encoreRemaining + ' more plays queued. Click to '
+        + (encoreRemaining === MAX_ENCORE_COUNT ? 'turn off' : 'add another');
+    }
+    els.btnEncore.innerHTML = ICONS.repeat
+      + '<span id="encore-count" class="encore-count" aria-hidden="true">' + countText + '</span>';
+    els.encoreCount = document.getElementById('encore-count');
+    els.btnEncore.classList.toggle('is-active', active);
+    els.btnEncore.setAttribute('aria-pressed', active ? 'true' : 'false');
+    els.btnEncore.setAttribute('aria-label', label);
+    els.btnEncore.setAttribute('title', label);
+  }
+
+  function cycleSleep() {
+    sleepIndex = (sleepIndex + 1) % SLEEP_OPTIONS.length;
+    setSleep(SLEEP_OPTIONS[sleepIndex]);
+    settleControl(els.btnSleep);
+  }
+
+  function setSleep(minutes) {
+    clearInterval(sleepTickId);
+    if (!minutes) {
+      sleepEnd = null;
+      updateSleep();
+      return;
+    }
+    sleepEnd = Date.now() + minutes * 60000;
+    sleepTickId = setInterval(tickSleep, 1000);
+    updateSleep();
+  }
+
+  function tickSleep() {
+    if (!sleepEnd) return;
+    if (sleepEnd <= Date.now()) {
+      clearInterval(sleepTickId);
+      sleepEnd = null;
+      sleepIndex = 0;
+      sleepFading = true;
+      audio.pause();
+    }
+    updateSleep();
+  }
+
+  function updateSleep() {
+    if (!sleepEnd) {
+      els.btnSleep.innerHTML = ICONS.moon + '<span id="sleep-label" class="sr-only">Sleep timer</span>';
+      els.sleepLabel = document.getElementById('sleep-label');
+      els.btnSleep.style.color = '';
+      els.btnSleep.classList.remove('is-active');
+      els.btnSleep.setAttribute('aria-pressed', 'false');
+      els.btnSleep.setAttribute('aria-label', 'Sleep timer');
+      els.btnSleep.setAttribute('title', 'Sleep timer');
+      return;
+    }
+    var minutes = SLEEP_OPTIONS[sleepIndex];
+    els.btnSleep.innerHTML = '<span id="sleep-label">' + minutes + '</span>';
+    els.sleepLabel = document.getElementById('sleep-label');
+    els.btnSleep.style.color = 'var(--radio-accent)';
+    els.btnSleep.classList.add('is-active');
+    els.btnSleep.setAttribute('aria-pressed', 'true');
+    els.btnSleep.setAttribute('aria-label', 'Stop in ' + minutes + ' minutes');
+    els.btnSleep.setAttribute('title', 'Stop in ' + minutes + ' minutes');
+  }
+
+  function renderStations() {
+    els.stationOptions.innerHTML = stations.map(function (station) {
+      return '<button class="station-option ' + (station.id === stationId ? 'active' : '') + '" type="button" data-station="' + escapeHtml(station.id) + '">'
+        + '<strong>' + escapeHtml(station.name) + '</strong>'
+        + '<span>' + escapeHtml(station.description) + '</span>'
+        + '</button>';
+    }).join('');
+
+    els.stationOptions.querySelectorAll('[data-station]').forEach(function (button) {
+      button.addEventListener('click', function () {
+        var wasPlaying = isPlaying;
+        stationId = button.dataset.station || 'default';
+        localStorage.setItem(STATION_KEY, stationId);
+        updateStationText();
+        renderStations();
+        audio.pause();
+        currentTrack = null;
+        resetEncore();
+        tune({ reset: true, loadFirst: true }).then(function () {
+          if (wasPlaying && currentTrack) playTrack(currentTrack);
+        });
+      });
+    });
+  }
+
+  function renderUpcoming() {
+    var preview = upcoming.slice(0, 3);
+    els.upcomingPreview.innerHTML = preview.length
+      ? preview.map(function (item) { return '<li>' + escapeHtml(item.title || item.name) + '</li>'; }).join('')
+      : '<li></li>';
+
+    els.upcomingList.innerHTML = upcoming.length
+      ? upcoming.slice(0, 12).map(function (item) {
+        return '<li>' + escapeHtml(item.title || item.name) + '</li>';
+      }).join('')
+      : '<li></li>';
+  }
+
+  function updateStationText() {
+    var station = stations.find(function (item) { return item.id === stationId; }) || stations[0];
+    if (!station) return;
+    els.stationName.textContent = station.name;
+  }
+
+  function updatePlayIcon() {
+    els.btnPlay.setAttribute('aria-label', isPlaying ? 'Pause' : 'Play');
+    els.btnPlay.setAttribute('title', isPlaying ? 'Pause' : 'Play');
+    els.btnPlay.setAttribute('aria-pressed', isPlaying ? 'true' : 'false');
+  }
+
+  function updateMotion() {
+    els.radioPage.classList.toggle('is-playing', isPlaying);
+    syncAtmosphere();
+  }
+
+  function initAtmosphere() {
+    if (!els.radioAtmosphereVideo) return;
+    els.radioAtmosphereVideo.muted = true;
+    els.radioAtmosphereVideo.defaultMuted = true;
+    els.radioAtmosphereVideo.addEventListener('canplay', syncAtmosphere);
+    if (atmosphereMotionQuery.addEventListener) {
+      atmosphereMotionQuery.addEventListener('change', syncAtmosphere);
+    } else if (atmosphereMotionQuery.addListener) {
+      atmosphereMotionQuery.addListener(syncAtmosphere);
+    }
+    if (navigator.connection && navigator.connection.addEventListener) {
+      navigator.connection.addEventListener('change', syncAtmosphere);
+    }
+    applyRoom();
+  }
+
+  function syncAtmosphere() {
+    syncAmbience();
+    if (!els.radioAtmosphereVideo) return;
+    var saveData = Boolean(navigator.connection && navigator.connection.saveData);
+    var shouldMove = roomId !== 'off'
+      && isPlaying
+      && !document.hidden
+      && !atmosphereMotionQuery.matches
+      && !saveData;
+    var sceneActive = usesScene();
+
+    if (scene) scene.setRunning(sceneActive && shouldMove);
+    if (sceneActive || !shouldMove) {
+      els.radioAtmosphereVideo.pause();
+      els.radioPage.classList.remove('is-atmosphere-moving');
+      return;
+    }
+
+    var playAttempt = els.radioAtmosphereVideo.play();
+    if (playAttempt && playAttempt.then) {
+      playAttempt.then(function () {
+        els.radioPage.classList.add('is-atmosphere-moving');
+      }).catch(function () {
+        els.radioPage.classList.remove('is-atmosphere-moving');
+      });
+    }
+  }
+
+  function normalizeRoom(value) {
+    return Object.prototype.hasOwnProperty.call(ROOMS, value) ? value : 'rain';
+  }
+
+  function setRoom(nextRoom) {
+    roomId = normalizeRoom(nextRoom);
+    localStorage.setItem(ROOM_KEY, roomId);
+    applyRoom();
+  }
+
+  function applyRoom() {
+    var room = ROOMS[roomId];
+    Object.keys(ROOMS).forEach(function (id) {
+      els.radioPage.classList.toggle('is-room-' + id, id === roomId);
+    });
+    if (usesScene()) {
+      ensureScene();
+      if (scene) {
+        // A hidden canvas switches at once; a visible one crossfades between rooms.
+        scene.setShader(shaderUrl(roomId), {
+          event: room.event || null,
+          immediate: !els.radioPage.classList.contains('is-scene-live'),
+        });
+      }
+      loadEnergy();
+    }
+    els.radioPage.classList.toggle('is-scene-live', usesScene() && Boolean(scene) && scene.ready);
+    els.radioPage.classList.toggle('is-video-hidden', !room.sourceKey);
+    updateRoomSound();
+    els.roomLabel.textContent = room.label;
+    els.btnRoom.setAttribute('aria-label', room.ariaLabel);
+    els.roomOptions.forEach(function (option) {
+      option.setAttribute('aria-selected', option.dataset.room === roomId ? 'true' : 'false');
+    });
+    if (room.sourceKey) applyAtmosphereSource(room.sourceKey);
+    syncAtmosphere();
+  }
+
+  function usesScene() {
+    return Boolean(ROOMS[roomId].scene) && !sceneFailed;
+  }
+
+  function shaderUrl(id) {
+    return els.radioAtmosphereCanvas.dataset['shader' + id.charAt(0).toUpperCase() + id.slice(1)];
+  }
+
+  // Shader rooms share one scene, created on first use; any failure falls back to the
+  // room's video (or a still background when the room has none).
+  function ensureScene() {
+    if (scene || sceneFailed) return;
+    var canvas = els.radioAtmosphereCanvas;
+    var created = canvas && window.RadioScene && window.RadioScene.create(canvas, {
+      stats: /[?&]scene_stats=1\b/.test(window.location.search),
+      energySource: currentEnergy,
+      onEvent: function (type, seed) {
+        if (ambience) ambience.event(type, seed);
+      },
+      onReady: function () {
+        if (!scene) return;
+        scene.ready = true;
+        applyRoom();
+      },
+      onFail: function () {
+        sceneFailed = true;
+        if (scene) scene.destroy();
+        scene = null;
+        applyRoom();
+      },
+    });
+    if (!created) {
+      sceneFailed = true;
+      return;
+    }
+    scene = created;
+    scene.ready = false;
+    scene.setDark(isDarkTheme());
+    if (scenePalette) scene.setPalette(scenePalette);
+    if (sceneCover) scene.setCover(sceneCover);
+  }
+
+  // Loudness envelope of the current track, fetched only while a scene room is showing.
+  function loadEnergy() {
+    var name = currentTrack ? currentTrack.name : '';
+    if (name === energyTrackName) return;
+    trackEnergy = null;
+    energyTrackName = '';
+    if (!currentTrack || !currentTrack.energy_url || !usesScene()) return;
+    energyTrackName = name;
+    fetch(currentTrack.energy_url)
+      .then(readApi)
+      .then(function (data) {
+        if (energyTrackName !== name || !data || !data.values || !data.values.length) return;
+        trackEnergy = { hop: Number(data.hop) || 0.25, values: Uint8Array.from(data.values) };
+      })
+      .catch(function () {});
+  }
+
+  function currentEnergy() {
+    if (!trackEnergy || !isPlaying) return null;
+    var values = trackEnergy.values;
+    var position = audio.currentTime / trackEnergy.hop;
+    var index = Math.floor(position);
+    if (!(index >= 0 && index < values.length)) return null;
+    var next = values[Math.min(index + 1, values.length - 1)];
+    return (values[index] + (next - values[index]) * (position - index)) / 255;
+  }
+
+  function initAmbience() {
+    if (!ambience) return;
+    ambience.setIntensitySource(function () {
+      return scene && scene.ready && usesScene() ? scene.intensity() : null;
+    });
+  }
+
+  function roomHasSound() {
+    return Boolean(ambience && ROOMS[roomId].sound);
+  }
+
+  function unlockAmbience() {
+    if (!roomSoundOn || !roomHasSound()) return;
+    ambience.setProfile(ROOMS[roomId].sound);
+    ambience.unlock();
+  }
+
+  // Ambience follows the music; after the sleep timer it lingers a little longer.
+  function syncAmbience() {
+    if (!ambience) return;
+    var wanted = roomSoundOn && roomHasSound() && isPlaying;
+    if (roomHasSound()) ambience.setProfile(ROOMS[roomId].sound);
+    ambience.setActive(wanted, !wanted && sleepFading ? { tail: SLEEP_AMBIENCE_TAIL } : null);
+    if (wanted || !isPlaying) sleepFading = false;
+  }
+
+  function toggleRoomSound() {
+    roomSoundOn = !roomSoundOn;
+    localStorage.setItem(ROOM_SOUND_KEY, roomSoundOn ? 'on' : 'off');
+    if (roomSoundOn) unlockAmbience();
+    updateRoomSound();
+    syncAmbience();
+  }
+
+  function updateRoomSound() {
+    if (!els.btnRoomSound) return;
+    els.radioPage.classList.toggle('has-room-sound', roomHasSound());
+    var label = roomSoundOn ? 'Ambient sound: on' : 'Ambient sound: off';
+    els.btnRoomSound.setAttribute('aria-pressed', roomSoundOn ? 'true' : 'false');
+    els.btnRoomSound.setAttribute('aria-label', label);
+    els.btnRoomSound.setAttribute('title', label);
+  }
+
+  function isDarkTheme() {
+    return document.body.getAttribute('data-theme') === 'dark';
+  }
+
+  function applyAtmosphereSource(sourceKey) {
+    if (!els.radioAtmosphereVideo) return;
+    var sourceAttribute = 'room' + sourceKey + 'Src';
+    var posterAttribute = 'room' + sourceKey + 'Poster';
+    var nextSource = els.radioAtmosphereVideo.dataset[sourceAttribute];
+    var nextPoster = els.radioAtmosphereVideo.dataset[posterAttribute];
+
+    if (!nextSource || els.radioAtmosphereVideo.getAttribute('src') === nextSource) return;
+
+    els.radioAtmosphereVideo.pause();
+    els.radioPage.classList.remove('is-atmosphere-moving');
+    els.radioAtmosphereVideo.setAttribute('src', nextSource);
+    if (nextPoster) els.radioAtmosphereVideo.setAttribute('poster', nextPoster);
+    els.radioAtmosphereVideo.load();
+  }
+
+  function toggleRoomMenu() {
+    var willOpen = els.roomMenu.hidden;
+    els.roomMenu.hidden = !willOpen;
+    els.btnRoom.setAttribute('aria-expanded', willOpen ? 'true' : 'false');
+  }
+
+  function closeRoomMenu() {
+    if (!els.roomMenu || els.roomMenu.hidden) return;
+    els.roomMenu.hidden = true;
+    els.btnRoom.setAttribute('aria-expanded', 'false');
+  }
+
+  function setBuffering(active) {
+    if (!els.radioPage) return;
+    els.radioPage.classList.toggle('is-buffering', Boolean(active));
+  }
+
+  function updateFavorite() {
+    var active = Boolean(currentTrack && currentTrack.is_favorite);
+    els.btnFav.innerHTML = (active ? ICONS.heartFilled : ICONS.heart) + '<span class="sr-only">' + (active ? 'Favorited' : 'Favorite') + '</span>';
+    els.btnFav.classList.toggle('is-active', active);
+    els.btnFav.style.color = active ? 'var(--radio-accent)' : '';
+    els.btnFav.setAttribute('aria-pressed', active ? 'true' : 'false');
+    els.btnFav.setAttribute('aria-label', active ? 'Remove from favorites' : 'Add to favorites');
+    els.btnFav.setAttribute('title', active ? 'Remove from favorites' : 'Add to favorites');
+  }
+
+  function onTimeUpdate() {
+    var duration = playableDuration();
+    var pct = duration ? (audio.currentTime / duration) * 100 : 0;
+    els.progressBar.value = pct;
+    els.progressBar.style.background = 'linear-gradient(to right, var(--radio-accent) ' + pct + '%, rgba(127,127,127,0.22) ' + pct + '%)';
+    els.timeCurrent.textContent = formatTime(audio.currentTime);
+    els.timeTotal.textContent = formatTime(duration);
+    if (Date.now() - saveTick > 5000) {
+      saveTick = Date.now();
+      savePosition();
+    }
+    if (Date.now() - mediaPositionTick > 3000) {
+      mediaPositionTick = Date.now();
+      updateMediaPosition();
+    }
+  }
+
+  function restoreSavedTimeOnce() {
+    if (!currentTrack) return;
+    var saved = readJson(POSITION_KEY, {});
+    var duration = playableDuration();
+    if (saved.name === currentTrack.name && saved.time && duration && saved.time < duration - 5) {
+      audio.currentTime = saved.time;
+    }
+  }
+
+  function savePosition() {
+    if (!currentTrack) return;
+    localStorage.setItem(POSITION_KEY, JSON.stringify({
+      name: currentTrack.name,
+      time: audio.currentTime || 0,
+    }));
+  }
+
+  function rememberRecent(name) {
+    if (!name) return;
+    recent = normalizeRecent(recent);
+    recent = recent.filter(function (item) { return item !== name; });
+    recent.push(name);
+    recent = recent.slice(-30);
+    localStorage.setItem(RECENT_KEY, JSON.stringify(recent));
+  }
+
+  function updateMediaSession() {
+    if (!('mediaSession' in navigator) || !currentTrack) return;
+    navigator.mediaSession.metadata = new MediaMetadata({
+      title: currentTrack.title || 'Spooly Radio',
+      artist: currentTrack.artist || getStationName(),
+      album: currentTrack.album || 'Spooly',
+      artwork: buildMediaArtwork(currentTrack),
+    });
+    updateMediaSessionState();
+    try {
+      navigator.mediaSession.setActionHandler('play', function () { audio.play(); });
+      navigator.mediaSession.setActionHandler('pause', function () { audio.pause(); });
+      navigator.mediaSession.setActionHandler('nexttrack', function () { playNext(true, { manual: true }); });
+      navigator.mediaSession.setActionHandler('seekto', function (details) {
+        var duration = playableDuration();
+        if (details && typeof details.seekTime === 'number' && duration) {
+          audio.currentTime = Math.max(0, Math.min(details.seekTime, duration));
+          updateMediaPosition();
+        }
+      });
+    } catch (error) {}
+    updateMediaPosition();
+  }
+
+  function loadTrackMetadata(track) {
+    if (!track || !track.name) return;
+    var token = metadataLoadToken;
+    fetch('/api/radio/metadata?uri=' + encodeURIComponent(track.name))
+      .then(readApi)
+      .then(function (metadata) {
+        if (token !== metadataLoadToken || !currentTrack || metadata.name !== currentTrack.name) return;
+        currentTrack.title = metadata.title || currentTrack.title;
+        currentTrack.artist = metadata.artist || '';
+        currentTrack.album = metadata.album || '';
+        currentTrack.duration = metadata.duration || null;
+        queueTrackInfo(currentTrack.title || 'Untitled audio', buildTrackMeta(currentTrack));
+        updateMediaSession();
+      })
+      .catch(function () {});
+  }
+
+  function updateMediaSessionState() {
+    if (!('mediaSession' in navigator)) return;
+    try {
+      navigator.mediaSession.playbackState = isPlaying ? 'playing' : 'paused';
+    } catch (error) {}
+  }
+
+  function updateMediaPosition() {
+    if (!('mediaSession' in navigator) || !navigator.mediaSession.setPositionState) return;
+    var duration = playableDuration();
+    if (!duration) return;
+    var position = Math.max(0, Math.min(audio.currentTime || 0, duration));
+    try {
+      navigator.mediaSession.setPositionState({
+        duration: duration,
+        playbackRate: audio.playbackRate || 1,
+        position: position,
+      });
+    } catch (error) {}
+  }
+
+  function buildMediaArtwork(track) {
+    if (!track || (!track.artwork_url && !track.thumb_url)) return [];
+    var src = absoluteUrl(track.artwork_url || track.thumb_url);
+    return [
+      { src: src, sizes: '96x96', type: 'image/png' },
+      { src: src, sizes: '128x128', type: 'image/png' },
+      { src: src, sizes: '192x192', type: 'image/png' },
+      { src: src, sizes: '256x256', type: 'image/png' },
+      { src: src, sizes: '384x384', type: 'image/png' },
+      { src: src, sizes: '512x512', type: 'image/png' },
+    ];
+  }
+
+  function absoluteUrl(value) {
+    try {
+      return new URL(value, window.location.href).href;
+    } catch (error) {
+      return value;
+    }
+  }
+
+  function setNeedle() {
+    var angle = -42 + Math.floor(Math.random() * 84);
+    els.btnPlay.style.setProperty('--needle-angle', angle + 'deg');
+  }
+
+  function updateSignalArt(track) {
+    var seed = track ? (track.name || track.title || '') : 'spooly-radio';
+    var colors = paletteFor(seed);
+    els.btnPlay.style.setProperty('--radio-art-a', colors[0]);
+    els.btnPlay.style.setProperty('--radio-art-b', colors[1]);
+    els.btnPlay.style.setProperty('--radio-art-c', colors[2]);
+    els.radioPage.style.setProperty('--radio-art-a', colors[0]);
+    els.radioPage.style.setProperty('--radio-art-b', colors[1]);
+    els.radioPage.style.setProperty('--radio-art-c', colors[2]);
+    scenePalette = colors;
+    if (scene) scene.setPalette(colors);
+
+    artLoadToken += 1;
+    var token = artLoadToken;
+    els.btnPlay.classList.remove('has-cover');
+    els.btnPlay.classList.add('no-cover');
+
+    var artworkUrl = track && (track.artwork_url || track.thumb_url);
+    if (!artworkUrl || !els.coverArt) {
+      clearCoverArt();
+      return;
+    }
+
+    els.coverArt.onload = function () {
+      if (token !== artLoadToken) return;
+      if (els.coverArt.naturalWidth <= 2 && els.coverArt.naturalHeight <= 2) {
+        clearCoverArt();
+        return;
+      }
+      els.btnPlay.classList.remove('no-cover');
+      els.btnPlay.classList.add('has-cover');
+      sceneCover = els.coverArt;
+      if (scene) scene.setCover(els.coverArt);
+    };
+    els.coverArt.onerror = function () {
+      if (token !== artLoadToken) return;
+      clearCoverArt();
+    };
+    els.coverArt.src = artworkUrl
+      + (artworkUrl.indexOf('?') >= 0 ? '&' : '?')
+      + 'v=' + encodeURIComponent(track.name || '');
+  }
+
+  function clearCoverArt() {
+    if (!els.coverArt) return;
+    els.coverArt.removeAttribute('src');
+    els.btnPlay.classList.remove('has-cover');
+    els.btnPlay.classList.add('no-cover');
+    sceneCover = null;
+    if (scene) scene.setCover(null);
+  }
+
+  function paletteFor(seed) {
+    var palettes = [
+      ['#466b61', '#a88756', '#d7d2c4'],
+      ['#5c6750', '#b18462', '#d8d3c8'],
+      ['#57707a', '#9b8257', '#d2d5ce'],
+      ['#675f82', '#9b8b5b', '#d7d1c0'],
+      ['#72634e', '#5f8174', '#d8d4c7'],
+      ['#4f6f7e', '#a36f5d', '#d5d0c4'],
+    ];
+    var hash = 0;
+    for (var i = 0; i < seed.length; i += 1) {
+      hash = ((hash << 5) - hash + seed.charCodeAt(i)) | 0;
+    }
+    return palettes[Math.abs(hash) % palettes.length];
+  }
+
+  function getStationName() {
+    var station = stations.find(function (item) { return item.id === stationId; });
+    return station ? station.name : 'Default Station';
+  }
+
+  function showLoadError(error) {
+    if (window.console && console.error) {
+      console.error('Radio load failed:', error);
+    }
+    els.trackTitle.textContent = 'Failed to load';
+    els.radioPage.classList.add('has-error');
+    setBuffering(false);
+    if (els.trackMeta) {
+      els.trackMeta.textContent = '';
+      els.trackMeta.classList.remove('has-meta');
+    }
+    els.upcomingPreview.innerHTML = '<li></li>';
+  }
+
+  function readApi(response) {
+    return response.json().then(function (payload) {
+      if (!response.ok || payload.success === false) {
+        throw new Error(payload.error || 'Request failed');
+      }
+      return payload.data || payload;
+    });
+  }
+
+  function readJson(key, fallback) {
+    try {
+      var value = JSON.parse(localStorage.getItem(key) || 'null');
+      return value == null ? fallback : value;
+    } catch (error) {
+      return fallback;
+    }
+  }
+
+  function normalizeRecent(value) {
+    if (!Array.isArray(value)) return [];
+    return value.filter(function (item) {
+      return typeof item === 'string' && item;
+    }).slice(-30);
+  }
+
+  function formatTime(seconds) {
+    if (!seconds || !isFinite(seconds)) return '0:00';
+    var minutes = Math.floor(seconds / 60);
+    var rest = String(Math.floor(seconds % 60)).padStart(2, '0');
+    return minutes + ':' + rest;
+  }
+
+  function setTrackInfo(title, meta) {
+    els.trackTitle.textContent = title;
+    if (!els.trackMeta) return;
+    els.trackMeta.textContent = meta || '';
+    els.trackMeta.classList.toggle('has-meta', Boolean(meta));
+  }
+
+  function queueTrackInfo(title, meta) {
+    if (els.radioPage.classList.contains('is-changing-track')) {
+      pendingTrackTitle = title;
+      pendingTrackMeta = meta || '';
+      return;
+    }
+    setTrackInfo(title, meta);
+  }
+
+  function buildTrackMeta(track) {
+    if (!track) return '';
+    var parts = [];
+    if (track.artist) parts.push(track.artist);
+    if (track.album) parts.push(track.album);
+    return parts.join(' · ');
+  }
+
+  function transitionTrackInfo(title, meta) {
+    clearTrackInfoTimers();
+    trackInfoTransitionId += 1;
+    var transitionId = trackInfoTransitionId;
+    pendingTrackTitle = title;
+    pendingTrackMeta = meta || '';
+    els.radioPage.classList.remove('is-changing-track');
+    void els.radioPage.offsetWidth;
+    els.radioPage.classList.add('is-changing-track');
+    trackInfoTimers.push(window.setTimeout(function () {
+      if (transitionId !== trackInfoTransitionId) return;
+      setTrackInfo(pendingTrackTitle, pendingTrackMeta);
+    }, 540));
+    trackInfoTimers.push(window.setTimeout(function () {
+      window.requestAnimationFrame(function () {
+        if (transitionId !== trackInfoTransitionId) return;
+        els.radioPage.classList.remove('is-changing-track');
+        trackInfoTimers = [];
+      });
+    }, 590));
+  }
+
+  function clearTrackInfoTimers() {
+    trackInfoTransitionId += 1;
+    trackInfoTimers.forEach(function (timer) {
+      window.clearTimeout(timer);
+    });
+    trackInfoTimers = [];
+  }
+
+  function reportTrackPlay() {
+    if (!currentTrack || trackPlayReportedFor === currentTrack.name) return;
+    trackPlayReportedFor = currentTrack.name;
+    reportFeedback('play', currentTrack, playbackRatio());
+  }
+
+  function reportPlaybackExit(event) {
+    if (!currentTrack || trackExitReportedFor === currentTrack.name + ':' + event) return;
+    var ratio = playbackRatio();
+    var finalEvent = event;
+    if (event === 'skip' && ratio >= 0.82) {
+      finalEvent = 'complete';
+    }
+    trackExitReportedFor = currentTrack.name + ':' + finalEvent;
+    reportFeedback(finalEvent, currentTrack, ratio);
+  }
+
+  function playbackRatio() {
+    var duration = playableDuration();
+    if (!duration) return null;
+    return Math.max(0, Math.min((audio.currentTime || 0) / duration, 1));
+  }
+
+  function playableDuration() {
+    return audio.duration && isFinite(audio.duration) && audio.duration > 0 ? audio.duration : 0;
+  }
+
+  function reportFeedback(event, track, ratio) {
+    if (!track || !track.name) return;
+    var payload = JSON.stringify({
+      name: track.name,
+      event: event,
+      ratio: ratio,
+      _csrf_token: window.SpoolySecurity && window.SpoolySecurity.csrfToken || '',
+    });
+    if (navigator.sendBeacon) {
+      try {
+        var blob = new Blob([payload], { type: 'application/json' });
+        if (navigator.sendBeacon('/api/radio/feedback', blob)) return;
+      } catch (error) {}
+    }
+    fetch('/api/radio/feedback', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: payload,
+      keepalive: true,
+    }).catch(function () {});
+  }
+
+  function settleControl(element) {
+    if (!element) return;
+    element.classList.remove('is-settling');
+    void element.offsetWidth;
+    element.classList.add('is-settling');
+    window.setTimeout(function () {
+      element.classList.remove('is-settling');
+    }, 700);
+  }
+
+  function escapeHtml(value) {
+    return String(value == null ? '' : value)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;');
+  }
+
+  function toCamel(id) {
+    return id.replace(/-([a-z])/g, function (_, chr) { return chr.toUpperCase(); });
+  }
+
+  function replaceFeather() {
+    if (window.feather) {
+      window.feather.replace();
+    }
+    updatePlayIcon();
+    updateFavorite();
+    updateEncore();
+  }
+
+  document.addEventListener('DOMContentLoaded', init);
+})();

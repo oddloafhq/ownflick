@@ -1,0 +1,26 @@
+[tool.poetry]
+name = "spooly"
+version = "0.8.45"
+description = "A local media server that combines the features of TikTok and Pinterest"
+authors = ["Oddloaf <oddloafhq@users.noreply.github.com>"]
+readme = "README.md"
+license = "MIT"
+homepage = "https://github.com/oddloafhq/spooly"
+repository = "https://github.com/oddloafhq/spooly"
+keywords = ["spooly", "tiktok", "jellyfin", "vlc"]
+
+[tool.poetry.scripts]
+spooly = 'spooly.run:main'
+
+[tool.poetry.dependencies]
+python = ">=3.10,<4.0"
+flask = "^3.1.3"
+waitress = "^3.0.2"
+pyyaml = "^6.0"
+requests = "^2.33.0"
+pillow = "^12.3.0"
+pytest = "^9.0.3"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"

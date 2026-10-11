@@ -1,0 +1,167 @@
+{% extends "base.html" %}
+
+{% block extra_head %}
+<link rel="stylesheet" href="{{ static_asset('settings.css') }}">
+{% endblock %}
+
+{% block content %}
+<main class="settings-page tool-page">
+  <header class="settings-header tool-page-header">
+    <p class="tool-page-overline"><i data-feather="sliders"></i><span>Local Preferences</span></p>
+    <h1 class="settings-title">Settings</h1>
+    <p class="tool-page-intro">Manage appearance, the media index, and local services.</p>
+  </header>
+
+  <div class="settings-stack">
+    <section aria-labelledby="appearance-title">
+      <h2 id="appearance-title" class="settings-section-title">Appearance</h2>
+      <div class="settings-card appearance-card">
+        <div class="appearance-heading">
+          <div class="settings-row-title">Display Mode</div>
+          <div class="settings-row-copy">Your selection applies to every page immediately.</div>
+        </div>
+        <div class="theme-options" role="group" aria-label="Display mode">
+          <button class="theme-option" type="button" data-theme-preference="system" aria-pressed="false">
+            <span class="theme-preview theme-preview-system"><span class="theme-check"><i data-feather="check"></i></span></span><span>System</span>
+          </button>
+          <button class="theme-option" type="button" data-theme-preference="light" aria-pressed="false">
+            <span class="theme-preview theme-preview-light"><span class="theme-check"><i data-feather="check"></i></span></span><span>Light</span>
+          </button>
+          <button class="theme-option" type="button" data-theme-preference="dark" aria-pressed="false">
+            <span class="theme-preview theme-preview-dark"><span class="theme-check"><i data-feather="check"></i></span></span><span>Dark</span>
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <section aria-labelledby="library-title">
+      <h2 id="library-title" class="settings-section-title">Media Library</h2>
+      <div class="settings-card">
+        <div class="library-summary">
+          <div class="library-total"><span id="media-total">{{ videos + images }}</span><span class="library-total-unit">local media items</span></div>
+          <div class="library-types"><span id="videos-count">{{ videos }}</span> videos · <span id="images-count">{{ images }}</span> images</div>
+          <div id="index-sync-state" class="library-sync-state"><span class="library-sync-dot"></span><span id="index-sync-copy">Loading index status…</span></div>
+        </div>
+        <div class="settings-row">
+          <span class="setting-icon"><i data-feather="refresh-cw"></i></span>
+          <div class="settings-row-main">
+            <div class="settings-row-title">Rescan Media Library</div>
+            <div class="settings-row-copy">Use after files are added, moved, or deleted outside Spooly while it is running.</div>
+          </div>
+          <button id="refresh-library" class="settings-action" type="button">Scan</button>
+        </div>
+        <div class="settings-row">
+          <span class="setting-icon"><i data-feather="image"></i></span>
+          <div class="settings-row-main">
+            <div class="settings-row-title">Thumbnail Cache</div>
+            <div class="settings-row-copy"><span id="cache-size">{{ cache_size_mb }} MB</span>; thumbnails regenerate as needed while browsing.</div>
+          </div>
+          <button id="clear-cache" class="settings-action" type="button">Clear</button>
+        </div>
+      </div>
+    </section>
+
+    <section aria-labelledby="trash-title">
+      <h2 id="trash-title" class="settings-section-title">Recently Deleted</h2>
+      <div id="trash-list" class="settings-card">
+        <div class="settings-row">
+          <span class="setting-icon"><i data-feather="trash-2"></i></span>
+          <div class="settings-row-main">
+            <div class="settings-row-title">Trash</div>
+            <div id="trash-summary" class="settings-row-copy">Loading…</div>
+          </div>
+          <button id="empty-trash" class="settings-action is-danger" type="button" hidden>Empty</button>
+        </div>
+      </div>
+    </section>
+
+    <section aria-labelledby="privacy-title">
+      <h2 id="privacy-title" class="settings-section-title">Privacy and Recommendations</h2>
+      <div class="settings-card settings-row">
+        <span class="setting-icon"><i data-feather="clock"></i></span>
+        <div class="settings-row-main">
+          <div class="settings-row-title">Local Browsing History</div>
+          <div class="settings-row-copy">Reset views, skips, completions, and resume points without changing favorites or collections.</div>
+        </div>
+        <button id="reset-recommendations" class="settings-action is-danger" type="button">Reset</button>
+      </div>
+    </section>
+
+    <section id="download" aria-labelledby="download-title">
+      <h2 id="download-title" class="settings-section-title">Downloads</h2>
+      <div class="settings-card">
+        <div class="settings-row">
+          <span class="setting-icon"><i data-feather="activity"></i></span>
+          <div class="settings-row-main">
+            <div class="settings-row-title">Download Components</div>
+            <div id="download-dependency-copy" class="settings-row-copy">Checking status…</div>
+          </div>
+        </div>
+        <div class="settings-row">
+          <span class="setting-icon"><i data-feather="layers"></i></span>
+          <div class="settings-row-main">
+            <div class="settings-row-title">Concurrent Downloads</div>
+            <div class="settings-row-copy">Control parallel jobs. Two works well for most devices.</div>
+          </div>
+          <div id="download-levels" class="download-levels" role="group" aria-label="Concurrent download jobs">
+            <button class="download-level" type="button" data-concurrency="1">1</button>
+            <button class="download-level" type="button" data-concurrency="2">2</button>
+            <button class="download-level" type="button" data-concurrency="4">4</button>
+          </div>
+        </div>
+        <div class="settings-row">
+          <span class="setting-icon"><i data-feather="shield"></i></span>
+          <div class="settings-row-main">
+            <div class="settings-row-title">Website Credentials</div>
+            <div id="credential-summary" class="settings-row-copy">Loading…</div>
+          </div>
+          <button id="manage-credentials" class="settings-action" type="button">Manage</button>
+        </div>
+      </div>
+    </section>
+
+    {% if similarity_enabled %}
+    <section aria-label="Experiments">
+      <h2 class="settings-section-title">Experiments</h2>
+      <a href="{{ url_for('similarity_view') }}" class="settings-card settings-row">
+        <div class="settings-row-main">
+          <div class="settings-row-title">Similar Images</div>
+          <div class="settings-row-copy">View local vector status and similarity groups.</div>
+        </div>
+        <span aria-hidden="true">→</span>
+      </a>
+    </section>
+    {% endif %}
+
+    <section aria-label="About">
+      <footer class="about-footer about-card">
+        <div class="about-line">
+          <span class="about-name">Spooly</span><span class="about-separator" aria-hidden="true">·</span><span class="about-version">v{{ version }}</span><span class="about-separator" aria-hidden="true">·</span>
+          <a class="about-link" href="https://github.com/oddloafhq/spooly" target="_blank" rel="noopener noreferrer">GitHub</a>
+          <span class="about-separator" aria-hidden="true">·</span>
+          <a class="about-link" href="mailto:oddloafhq@users.noreply.github.com">Contact the Author</a>
+        </div>
+      </footer>
+    </section>
+  </div>
+</main>
+<div id="credential-mask" class="credential-mask" hidden>
+  <section class="credential-dialog" role="dialog" aria-modal="true" aria-labelledby="credential-title">
+    <div class="credential-head">
+      <div><h2 id="credential-title" class="credential-title">Website Credentials</h2><p class="credential-copy">Use them for sign-in-only content. Files remain on this device.</p></div>
+      <button id="close-credentials" class="credential-close" type="button" aria-label="Close"><i data-feather="x"></i></button>
+    </div>
+    <div id="credential-list" class="credential-list"><div class="credential-empty">Loading credentials…</div></div>
+    <div class="credential-upload">
+      <div class="credential-upload-title">Add or Update</div>
+      <p class="credential-upload-copy">Supports .txt and .cookies files. Uploading the same filename replaces it.</p>
+      <input id="credential-file" class="credential-file" type="file" accept=".txt,.cookies,text/plain">
+      <div class="credential-upload-actions"><button id="upload-credential" class="settings-action is-primary" type="button">Upload</button></div>
+    </div>
+  </section>
+</div>
+{% endblock %}
+
+{% block extra_body %}
+<script src="{{ static_asset('settings_page_controller.js') }}"></script>
+{% endblock %}

@@ -1,0 +1,223 @@
+{% extends "base.html" %}
+
+{% block extra_head %}
+<link rel="stylesheet" type="text/css" href="{{ static_asset('media_detail.css') }}">
+{% if similarity_enabled %}<link rel="stylesheet" href="{{ static_asset('experiments/image-similarity.css') }}">{% endif %}
+<link rel="stylesheet" href="{{ static_asset('image_detail.css') }}">
+{% endblock %}
+
+{% block content %}
+<div class="detail-shell">
+  <div class="detail-container">
+    <header class="detail-header">
+      <button onclick="history.back()" class="material-icon-btn" aria-label="Back" type="button">
+        <i data-feather="arrow-left" class="w-5 h-5"></i>
+      </button>
+      <div class="detail-header-actions">
+        {% if previous_url %}
+        <a href="{{ previous_url }}" class="material-icon-btn" aria-label="Previous image">
+          <i data-feather="chevron-left" class="w-5 h-5"></i>
+        </a>
+        {% endif %}
+        {% if next_url %}
+        <a href="{{ next_url }}" class="material-icon-btn" aria-label="Next image">
+          <i data-feather="chevron-right" class="w-5 h-5"></i>
+        </a>
+        {% endif %}
+        <button id="caption-primary-btn" class="detail-pill is-primary" type="button">
+          <i data-feather="zap" class="w-4 h-4"></i>
+          <span id="caption-primary-label">Generate Title</span>
+        </button>
+        <button id="fullscreen-btn" class="material-icon-btn" aria-label="View fullscreen" type="button">
+          <i data-feather="maximize" class="w-5 h-5"></i>
+        </button>
+        <button id="more-menu-btn" class="material-icon-btn" aria-label="More actions" type="button" aria-haspopup="menu" aria-controls="detail-action-menu" aria-expanded="false">
+          <i data-feather="more-vertical" class="w-5 h-5"></i>
+        </button>
+        <div id="detail-action-menu" class="detail-action-menu" role="menu" aria-label="Image actions" hidden>
+          <button id="caption-advanced-btn" class="detail-action-item" type="button" role="menuitem">
+            <i data-feather="sliders" class="w-4 h-4"></i>
+            <span>Advanced Generation</span>
+          </button>
+          <button id="copy-link-btn" class="detail-action-item" type="button" role="menuitem">
+            <i data-feather="link" class="w-4 h-4"></i>
+            <span>Copy Link</span>
+          </button>
+          {% if source_meta and source_meta.url %}
+          <a href="{{ source_meta.url }}" target="_blank" rel="noopener noreferrer" class="detail-action-item" role="menuitem">
+            <i data-feather="external-link" class="w-4 h-4"></i>
+            <span>View Source</span>
+          </a>
+          {% endif %}
+          <div class="detail-action-divider" role="separator"></div>
+          <button onclick="confirmDelete()" class="detail-action-item is-danger" type="button" role="menuitem">
+            <i data-feather="trash-2" class="w-4 h-4"></i>
+            <span>Delete Image</span>
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <div class="detail-grid">
+      <div class="image-area">
+        <div class="detail-stage image-stage" id="image-container">
+          <img
+            src="/thumb?uri={{ uri_query_encoded }}"
+            data-full-src="/media?uri={{ uri_query_encoded }}"
+            alt="{{image.name}}"
+            class="image-viewer detail-hero"
+            id="main-image"
+            fetchpriority="high"
+          />
+          <div class="detail-float-bar">
+            <button id="zoom-out-btn" class="detail-glass-btn" type="button" aria-label="Zoom out">
+              <i data-feather="zoom-out" class="w-5 h-5"></i>
+            </button>
+            <button id="zoom-in-btn" class="detail-glass-btn" type="button" aria-label="Zoom in">
+              <i data-feather="zoom-in" class="w-5 h-5"></i>
+            </button>
+            <button id="zoom-reset-btn" class="detail-glass-btn is-wide" type="button" aria-label="Reset zoom">
+              <span id="zoom-label">100%</span>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <section class="title-area" id="caption-card">
+        <p class="detail-label">Image</p>
+        <div id="caption-content" class="hidden min-w-0">
+          <h1 id="caption-title" class="detail-title detail-wrap-anywhere"></h1>
+          <div id="caption-tags" class="detail-tags"></div>
+        </div>
+        <button id="caption-empty-cta" class="title-empty-cta hidden" type="button" hidden aria-hidden="true">
+          <i data-feather="zap" class="w-5 h-5"></i>
+          Generate Title
+        </button>
+      </section>
+
+      {% if similarity_enabled %}{% include 'experiments/image-similarity.html' %}{% endif %}
+
+      <aside class="detail-aside info-area">
+        {% if source_meta and source_meta.url %}
+        <section>
+          <p class="detail-label">Source</p>
+          <a href="{{ source_meta.url }}" target="_blank" rel="noopener noreferrer" class="detail-source-link">
+            <i data-feather="external-link" class="w-4 h-4"></i>
+            <span>{{ source_meta.source_domain or 'View Source' }}</span>
+          </a>
+        </section>
+        {% endif %}
+
+        <section>
+          <p class="detail-label">File</p>
+          <div class="detail-meta">
+            <div class="detail-meta-path">{{image.name}}</div>
+            <div>{{ stat.st_size | filesizeformat }}</div>
+            <div>{{ stat.st_mtime | timestamp_to_date }}</div>
+          </div>
+        </section>
+
+        <details class="detail-disclosure hidden" id="embedded-generation-card">
+          <summary>
+            <span>Generation Details</span>
+            <i data-feather="chevron-down" class="w-4 h-4"></i>
+          </summary>
+          <div class="detail-disclosure-body">
+            <div>
+              <p class="detail-label">Model</p>
+              <div id="embedded-model" class="detail-meta-path"></div>
+            </div>
+            <div>
+              <div class="detail-disclosure-row">
+                <p class="detail-label">Prompt</p>
+                <button id="embedded-prompt-toggle" class="detail-text-btn" type="button">Show All</button>
+              </div>
+              <div id="embedded-prompt"></div>
+            </div>
+          </div>
+        </details>
+      </aside>
+    </div>
+  </div>
+
+  <!-- Fullscreen modal -->
+  <div id="fullscreen-modal" class="detail-modal is-media hidden">
+    <div class="detail-float-bar">
+      <button id="fullscreen-zoom-out" class="detail-glass-btn" type="button" aria-label="Zoom out">
+        <i data-feather="zoom-out" class="w-5 h-5"></i>
+      </button>
+      <button id="fullscreen-zoom-in" class="detail-glass-btn" type="button" aria-label="Zoom in">
+        <i data-feather="zoom-in" class="w-5 h-5"></i>
+      </button>
+      <button id="fullscreen-reset" class="detail-glass-btn is-wide" type="button" aria-label="Reset zoom">
+        <span id="fullscreen-zoom-label">100%</span>
+      </button>
+      <button id="close-fullscreen" class="detail-glass-btn" type="button" aria-label="Close fullscreen">
+        <i data-feather="x" class="w-5 h-5"></i>
+      </button>
+    </div>
+    <div class="detail-stage image-stage" id="fullscreen-stage">
+      <img
+        id="fullscreen-viewer-image"
+        src="/media?uri={{ uri_query_encoded }}"
+        alt="{{image.name}}"
+        class="image-viewer"
+      />
+    </div>
+  </div>
+
+  <!-- Prompt override modal -->
+  <div id="caption-prompt-modal" class="detail-modal hidden">
+    <section class="detail-dialog" role="dialog" aria-modal="true" aria-labelledby="caption-prompt-title">
+      <div class="detail-dialog-head">
+        <h2 id="caption-prompt-title" class="detail-dialog-title">Generation Override</h2>
+        <button id="caption-prompt-close" class="material-icon-btn" type="button" aria-label="Close">
+          <i data-feather="x" class="w-4 h-4"></i>
+        </button>
+      </div>
+      <div class="detail-dialog-body">
+        <div>
+          <label for="caption-override-system" class="detail-field-label">System Prompt</label>
+          <textarea id="caption-override-system" rows="4" class="detail-input"></textarea>
+        </div>
+        <div>
+          <label for="caption-override-user" class="detail-field-label">User Prompt</label>
+          <textarea id="caption-override-user" rows="6" class="detail-input"></textarea>
+          <p class="detail-field-hint">Use <code>{tags_limit}</code> or <code>{% raw %}{{tags_limit}}{% endraw %}</code> as a placeholder.</p>
+        </div>
+        <div class="detail-field-row">
+          <div>
+            <label for="caption-override-temperature" class="detail-field-label">temperature (0-2)</label>
+            <input id="caption-override-temperature" type="number" min="0" max="2" step="0.1" class="detail-input">
+          </div>
+          <div>
+            <label for="caption-override-tags" class="detail-field-label">tags_limit (1-20)</label>
+            <input id="caption-override-tags" type="number" min="1" max="20" step="1" class="detail-input">
+          </div>
+        </div>
+      </div>
+      <div class="detail-dialog-foot">
+        <button id="caption-override-cancel" class="detail-pill" type="button">Cancel</button>
+        <button id="caption-override-generate" class="detail-pill is-primary" type="button">Generate with Override</button>
+      </div>
+    </section>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_body %}
+{% if similarity_enabled %}<script defer src="{{ static_asset('experiments/image-similarity.js') }}"></script>{% endif %}
+<script src="{{ static_asset('image_viewer_controller.js') }}"></script>
+<script src="{{ static_asset('flow_actions_shared.js') }}"></script>
+<script src="{{ static_asset('flow_media_actions_controller.js') }}"></script>
+<script>
+  window.__SPOOLY_IMAGE_DETAIL_BOOT__ = {
+    uri: {{ uri|tojson }},
+    uriEncoded: {{ uri_query_encoded|tojson }},
+    previousUrl: {{ previous_url|tojson }},
+    nextUrl: {{ next_url|tojson }},
+    deleteUrl: {{ ('/delete/' ~ uri_path_encoded)|tojson }},
+  };
+</script>
+<script src="{{ static_asset('image_detail_page_controller.js') }}"></script>
+{% endblock %}

@@ -1,0 +1,160 @@
+{% extends "base.html" %}
+
+{% block extra_head %}
+<link rel="stylesheet" type="text/css" href="{{ static_asset('media_detail.css') }}">
+<link rel="stylesheet" href="{{ static_asset('detail.css') }}">
+{% endblock %}
+
+{% block content %}
+<div class="detail-shell">
+  <div class="detail-container">
+    <header class="detail-header">
+      <button onclick="history.back()" class="material-icon-btn" aria-label="Back" type="button">
+        <i data-feather="arrow-left" class="w-5 h-5"></i>
+      </button>
+
+      <div class="detail-header-actions">
+        {% if previous_item %}
+        <a href="/detail/{{ previous_item_path_encoded }}" class="material-icon-btn" aria-label="Previous video">
+          <i data-feather="chevron-left" class="w-5 h-5"></i>
+        </a>
+        {% endif %}
+
+        {% if next_item %}
+        <a href="/detail/{{ next_item_path_encoded }}" class="material-icon-btn" aria-label="Next video">
+          <i data-feather="chevron-right" class="w-5 h-5"></i>
+        </a>
+        {% endif %}
+
+        <button
+          id="favorite-btn"
+          class="favorite-btn material-icon-btn"
+          aria-label="Add to favorites"
+          type="button"
+        >
+          <i data-feather="heart" class="w-5 h-5"></i>
+          <span id="favorite-text" class="sr-only">Add to favorites</span>
+        </button>
+
+        <button id="pip-btn" class="material-icon-btn" aria-label="Picture in picture" type="button">
+          <i data-feather="minimize-2" class="w-5 h-5"></i>
+        </button>
+
+        <button id="fullscreen-btn" class="material-icon-btn" aria-label="Play fullscreen" type="button">
+          <i data-feather="maximize" class="w-5 h-5"></i>
+        </button>
+
+        <button id="more-menu-btn" class="material-icon-btn" aria-label="More actions" type="button" aria-haspopup="menu" aria-controls="detail-action-menu" aria-expanded="false">
+          <i data-feather="more-vertical" class="w-5 h-5"></i>
+        </button>
+
+        <div id="detail-action-menu" class="detail-action-menu" role="menu" aria-label="Video actions" hidden>
+          <button id="set-thumb-btn" class="detail-action-item" type="button" role="menuitem">
+            <i data-feather="camera" class="w-4 h-4"></i>
+            <span>Use Current Frame as Cover</span>
+          </button>
+          <button id="copy-link-btn" class="detail-action-item" type="button" role="menuitem">
+            <i data-feather="link" class="w-4 h-4"></i>
+            <span>Copy Link</span>
+          </button>
+          {% if source_meta and source_meta.url %}
+          <a href="{{ source_meta.url }}" target="_blank" rel="noopener noreferrer" class="detail-action-item" role="menuitem">
+            <i data-feather="external-link" class="w-4 h-4"></i>
+            <span>View Source</span>
+          </a>
+          {% endif %}
+          <div class="detail-action-divider" role="separator"></div>
+          <button onclick="confirmDelete()" class="detail-action-item is-danger" type="button" role="menuitem">
+            <i data-feather="trash-2" class="w-4 h-4"></i>
+            <span>Delete Video</span>
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <div class="detail-grid">
+      <main>
+        <div class="detail-stage video-stage" id="video-container">
+          <video
+            controls
+            preload="metadata"
+            class="video-player detail-hero"
+            id="main-video"
+            src="/media/{{ file_path_encoded }}"
+            poster="/thumb?uri={{ file_query_encoded }}"
+          >
+            Your browser does not support video playback.
+          </video>
+        </div>
+      </main>
+
+      <aside class="detail-aside">
+        <section>
+          <p class="detail-label">Video</p>
+          <h1 class="detail-title detail-wrap-anywhere">
+            {{ file.rsplit('/', 1)[-1].rsplit('.', 1)[0] }}
+          </h1>
+        </section>
+
+        {% if source_meta and source_meta.url %}
+        <section>
+          <p class="detail-label">Source</p>
+          <a href="{{ source_meta.url }}" target="_blank" rel="noopener noreferrer" class="detail-source-link">
+            <i data-feather="external-link" class="w-4 h-4"></i>
+            <span>{{ source_meta.source_domain or 'View Source' }}</span>
+          </a>
+        </section>
+        {% endif %}
+
+        <section>
+          <p class="detail-label">File</p>
+          <div class="detail-meta">
+            <div class="detail-meta-path">{{ file }}</div>
+            <div>{{ size | filesizeformat }}</div>
+            <div>{{ mtime }}</div>
+          </div>
+        </section>
+
+        <section>
+          <p class="detail-label">Speed</p>
+          <div class="detail-segment">
+            <button class="speed-btn" data-speed="0.5" type="button">0.5x</button>
+            <button class="speed-btn is-active" data-speed="1" type="button">1x</button>
+            <button class="speed-btn" data-speed="1.5" type="button">1.5x</button>
+            <button class="speed-btn" data-speed="2" type="button">2x</button>
+          </div>
+        </section>
+
+        {% if previous_item or next_item %}
+        <nav class="detail-pager" aria-label="Video navigation">
+          {% if previous_item %}
+          <a href="/detail/{{ previous_item_path_encoded }}" class="detail-pill">
+            <i data-feather="chevron-left" class="w-4 h-4"></i>
+            Previous
+          </a>
+          {% endif %}
+          {% if next_item %}
+          <a href="/detail/{{ next_item_path_encoded }}" class="detail-pill is-next">
+            Next
+            <i data-feather="chevron-right" class="w-4 h-4"></i>
+          </a>
+          {% endif %}
+        </nav>
+        {% endif %}
+      </aside>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_body %}
+<script>
+  window.__SPOOLY_DETAIL_BOOT__ = {
+    file: {{ file|tojson }},
+    resumePosition: {{ (resume.position if resume else 0)|tojson }},
+    deleteUrl: {{ ('/delete/' ~ file_path_encoded)|tojson }},
+    afterDeleteUrl: {{ ('/detail/' ~ next_item_path_encoded if next_item else ('/detail/' ~ previous_item_path_encoded if previous_item else none))|tojson }},
+  };
+</script>
+<script src="{{ static_asset('detail_page_controller.js') }}"></script>
+{% endblock %}

@@ -1,0 +1,629 @@
+/*
+ * Radio scene — full-screen fragment shaders behind the Radio page.
+ *
+ * Plain WebGL 1 with no dependencies: one triangle covering the screen and one shader
+ * per room, each loaded from its own .frag file and compiled once. Switching rooms
+ * crossfades the two shaders with constant-alpha blending, so no framebuffers are
+ * needed. Every shader receives the same uniforms and uses what it needs:
+ *
+ *   uRes, uTime       canvas size in pixels, scene time in seconds
+ *   uDark             0 = light theme (day), 1 = dark theme (night), eased
+ *   uIntensity        slow 0..1 swell of the weather (rain, snow, fire size ...)
+ *   uEnergy           smoothed loudness of the music, 0.5 when unknown
+ *   uFlash            lightning brightness, while a lightning event runs
+ *   uEvent, uEventSeed  seconds since the room's rare event began (-1 when none) and a
+ *                     random 0..1 that varies each time, e.g. which way a car drives
+ *   uSharp, uBlur     the current cover art: 256px with mipmaps, and 64px blurred
+ *
+ *   var scene = RadioScene.create(canvas, { onReady: fn, onFail: fn });
+ *   scene.setShader(url, { event: 'lightning', immediate: false });
+ *   scene.setRunning(true);        // animate; false eases to a stop and holds a still frame
+ *   scene.setCover(imgOrNull);     // null falls back to the palette
+ *   scene.setPalette(['#466b61', '#a88756', '#d7d2c4']);
+ *   scene.setDark(true);
+ *   scene.intensity();             // current uIntensity, e.g. to drive the ambient sound
+ *   scene.triggerEvent();          // start the room's rare event now
+ *
+ * Rare events (see EVENTS) happen every minute or two while playing, some only at night;
+ * options.onEvent(type, seed) fires when one starts, so a sound can go with it.
+ * options.energySource() returns the music's loudness 0..1 (or null when unknown); it is
+ * smoothed over seconds and makes the scene breathe and run a little faster.
+ *
+ * create() returns null when WebGL is unavailable; onFail fires for later failures
+ * (shader fetch or compile errors, lost context) so the caller can fall back.
+ */
+(function () {
+  'use strict';
+
+  var MAX_FPS = 30;
+  var MAX_PIXELS = 1000000;
+  var SHARP_SIZE = 256;
+  var BLUR_SIZE = 64;
+  var COVER_FADE_MS = 2600;
+  var SHADER_FADE_MS = 1500;
+  var SPEED_EASE_MS = 1400;
+  var DARK_EASE_MS = 900;
+  var ENERGY_RISE_MS = 1200;
+  var ENERGY_FALL_MS = 2800;
+  var NEUTRAL_ENERGY = 0.5;
+  var UNIFORMS = ['uRes', 'uTime', 'uDark', 'uIntensity', 'uFlash', 'uEnergy', 'uEvent', 'uEventSeed', 'uSharp', 'uBlur'];
+
+  // every: random gap in ms; seconds: how long the shader animates it; night: dark theme only.
+  var EVENTS = {
+    lightning: { every: [45000, 150000], seconds: 1.2, night: true },
+    burst: { every: [25000, 80000], seconds: 3.5, night: false },
+    car: { every: [40000, 120000], seconds: 8, night: true },
+    meteor: { every: [30000, 100000], seconds: 1.6, night: true },
+  };
+
+  var VERTEX_SHADER = [
+    'attribute vec2 aPosition;',
+    'void main() { gl_Position = vec4(aPosition, 0.0, 1.0); }',
+  ].join('\n');
+
+  function create(canvas, options) {
+    options = options || {};
+    var gl = getContext(canvas);
+    if (!gl) return null;
+
+    var shaders = {};
+    var current = null;
+    var previous = null;
+    var shaderFade = null;
+    var requestedUrl = '';
+    var readyNotified = false;
+    var sharpTexture = null;
+    var blurTexture = null;
+    var failed = false;
+    var destroyed = false;
+
+    var running = false;
+    var speed = 0;
+    var sceneTime = 180 + Math.random() * 600;
+    var dark = 1;
+    var darkTarget = 1;
+    var energy = NEUTRAL_ENERGY;
+    var frameId = 0;
+    var lastTick = 0;
+    var lastDraw = 0;
+    var eventStart = -1;
+    var eventSeed = 0;
+    var nextEventAt = 0;
+    var eventPending = false;
+
+    var palette = ['#466b61', '#a88756', '#d7d2c4'];
+    var hasCover = false;
+    var art = createArtCanvases();
+    var fade = null;
+
+    var stats = options.stats ? createStats(canvas, function () { triggerEvent(); }) : null;
+
+    canvas.addEventListener('webglcontextlost', onContextLost);
+    canvas.addEventListener('webglcontextrestored', onContextRestored);
+    window.addEventListener('resize', requestFrame);
+
+    renderArt(drawPalette(art.target, palette));
+    commitArt(1);
+    setupGl();
+
+    function setupGl() {
+      var buffer = gl.createBuffer();
+      gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
+      gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 3, -1, -1, 3]), gl.STATIC_DRAW);
+      gl.enableVertexAttribArray(0);
+      gl.vertexAttribPointer(0, 2, gl.FLOAT, false, 0, 0);
+
+      gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
+      sharpTexture = createTexture(gl, true);
+      blurTexture = createTexture(gl, false);
+      uploadArt();
+    }
+
+    // Shaders -------------------------------------------------------------------
+
+    function setShader(url, sceneOptions) {
+      sceneOptions = sceneOptions || {};
+      requestedUrl = url;
+      if (current && current.url === url) return;
+      loadShader(url)
+        .then(function (entry) {
+          if (destroyed || failed || requestedUrl !== url) return;
+          if (current && current.url === url) return;
+          var next = { url: url, entry: entry, event: EVENTS[sceneOptions.event] ? sceneOptions.event : null };
+          var fadeIn = current && !sceneOptions.immediate;
+          previous = fadeIn ? current : null;
+          shaderFade = fadeIn ? { start: now() } : null;
+          current = next;
+          eventStart = -1;
+          nextEventAt = 0;
+          if (!readyNotified) {
+            readyNotified = true;
+            if (options.onReady) options.onReady();
+          }
+          requestFrame();
+        })
+        .catch(fail);
+    }
+
+    function loadShader(url) {
+      if (!shaders[url]) {
+        shaders[url] = fetch(url)
+          .then(function (response) {
+            if (!response.ok) throw new Error('Shader request failed: ' + response.status);
+            return response.text();
+          })
+          .then(function (source) {
+            var entry = { source: source, program: null, uniforms: {} };
+            compileEntry(entry);
+            return entry;
+          });
+        shaders[url].catch(function () { delete shaders[url]; });
+      }
+      return shaders[url];
+    }
+
+    function compileEntry(entry) {
+      entry.program = buildProgram(gl, VERTEX_SHADER, entry.source);
+      gl.useProgram(entry.program);
+      UNIFORMS.forEach(function (name) {
+        entry.uniforms[name] = gl.getUniformLocation(entry.program, name);
+      });
+      gl.uniform1i(entry.uniforms.uSharp, 0);
+      gl.uniform1i(entry.uniforms.uBlur, 1);
+    }
+
+    function uploadArt() {
+      if (!sharpTexture) return;
+      gl.activeTexture(gl.TEXTURE0);
+      gl.bindTexture(gl.TEXTURE_2D, sharpTexture);
+      gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, art.sharp);
+      gl.generateMipmap(gl.TEXTURE_2D);
+      gl.activeTexture(gl.TEXTURE1);
+      gl.bindTexture(gl.TEXTURE_2D, blurTexture);
+      gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, art.blur);
+    }
+
+    function fail(error) {
+      if (failed || destroyed) return;
+      failed = true;
+      stop();
+      if (window.console && console.warn) console.warn('Radio scene unavailable:', error);
+      if (options.onFail) options.onFail(error);
+    }
+
+    function onContextLost(event) {
+      event.preventDefault();
+      sharpTexture = null;
+      blurTexture = null;
+      fail(new Error('WebGL context lost'));
+    }
+
+    function onContextRestored() {
+      if (destroyed) return;
+      try {
+        setupGl();
+        Object.keys(shaders).forEach(function (url) {
+          shaders[url].then(compileEntry);
+        });
+        failed = false;
+        requestFrame();
+      } catch (error) {
+        fail(error);
+      }
+    }
+
+    // Cover art ----------------------------------------------------------------
+
+    function setCover(image) {
+      var usable = Boolean(image && image.naturalWidth);
+      if (!usable && !hasCover) return;
+      hasCover = usable;
+      if (usable) drawCover(art.target, image);
+      startFade();
+    }
+
+    function setPalette(colors) {
+      if (!colors || !colors.length) return;
+      palette = colors.slice(0, 3);
+      if (!hasCover) startFade();
+    }
+
+    function startFade() {
+      if (!hasCover) drawPalette(art.target, palette);
+      renderArt(art.target);
+      fade = { start: now() };
+      requestFrame();
+    }
+
+    function renderArt(source) {
+      // Snapshot what is on screen now, then prepare the incoming sharp and blurred art.
+      art.fromSharpCtx.clearRect(0, 0, SHARP_SIZE, SHARP_SIZE);
+      art.fromSharpCtx.drawImage(art.sharp, 0, 0);
+      art.fromBlurCtx.clearRect(0, 0, BLUR_SIZE, BLUR_SIZE);
+      art.fromBlurCtx.drawImage(art.blur, 0, 0);
+
+      art.toSharpCtx.clearRect(0, 0, SHARP_SIZE, SHARP_SIZE);
+      art.toSharpCtx.drawImage(source, 0, 0, SHARP_SIZE, SHARP_SIZE);
+      art.toBlurCtx.clearRect(0, 0, BLUR_SIZE, BLUR_SIZE);
+      art.toBlurCtx.drawImage(source, 0, 0, BLUR_SIZE, BLUR_SIZE);
+      blurCanvas(art.toBlurCtx, BLUR_SIZE, 5, 3);
+      return source;
+    }
+
+    function commitArt(progress) {
+      var eased = progress * progress * (3 - 2 * progress);
+      blend(art.sharpCtx, art.fromSharp, art.toSharp, SHARP_SIZE, eased);
+      blend(art.blurCtx, art.fromBlur, art.toBlur, BLUR_SIZE, eased);
+      uploadArt();
+    }
+
+    // Loop ----------------------------------------------------------------------
+
+    function setRunning(value) {
+      running = Boolean(value);
+      requestFrame();
+    }
+
+    function setDark(value) {
+      darkTarget = value ? 1 : 0;
+      requestFrame();
+    }
+
+    function requestFrame() {
+      if (destroyed || failed || frameId) return;
+      frameId = window.requestAnimationFrame(tick);
+    }
+
+    function stop() {
+      if (frameId) window.cancelAnimationFrame(frameId);
+      frameId = 0;
+      lastTick = 0;
+    }
+
+    function tick(timestamp) {
+      frameId = 0;
+      if (!current || !current.entry.program) return;
+
+      var elapsed = lastTick ? Math.min(timestamp - lastTick, 100) : 0;
+      if (lastTick && timestamp - lastDraw < 1000 / MAX_FPS - 2 && needsAnotherFrame()) {
+        frameId = window.requestAnimationFrame(tick);
+        return;
+      }
+      lastTick = timestamp;
+      lastDraw = timestamp;
+
+      var target = running ? 1 : 0;
+      speed = approach(speed, target, elapsed / SPEED_EASE_MS);
+      dark = approach(dark, darkTarget, elapsed / DARK_EASE_MS);
+      energy = followEnergy(energy, elapsed);
+      // Louder passages run the scene slightly faster; integrating keeps motion continuous.
+      sceneTime += (elapsed / 1000) * speed * (0.85 + 0.3 * energy);
+
+      if (fade) {
+        var progress = Math.min(1, (now() - fade.start) / COVER_FADE_MS);
+        commitArt(progress);
+        if (progress >= 1) fade = null;
+      }
+
+      draw(timestamp);
+      if (stats) stats.frame(energy);
+      if (needsAnotherFrame()) frameId = window.requestAnimationFrame(tick);
+      else lastTick = 0;
+    }
+
+    function followEnergy(value, elapsed) {
+      var target = options.energySource ? options.energySource() : null;
+      if (typeof target !== 'number' || !isFinite(target)) target = NEUTRAL_ENERGY;
+      var tau = target > value ? ENERGY_RISE_MS : ENERGY_FALL_MS;
+      return value + (clamp(target, 0, 1) - value) * (1 - Math.exp(-elapsed / tau));
+    }
+
+    function needsAnotherFrame() {
+      return running || speed > 0.001 || Boolean(fade) || Boolean(shaderFade) || eventStart >= 0
+        || Math.abs(dark - darkTarget) > 0.001;
+    }
+
+    function draw(timestamp) {
+      resize();
+      gl.viewport(0, 0, canvas.width, canvas.height);
+      var event = updateEvent(timestamp);
+
+      if (!shaderFade) {
+        drawShader(current.entry, event);
+        return;
+      }
+      var progress = Math.min(1, (now() - shaderFade.start) / SHADER_FADE_MS);
+      gl.disable(gl.BLEND);
+      drawShader(previous.entry, null);
+      gl.enable(gl.BLEND);
+      gl.blendColor(0, 0, 0, progress * progress * (3 - 2 * progress));
+      gl.blendFunc(gl.CONSTANT_ALPHA, gl.ONE_MINUS_CONSTANT_ALPHA);
+      drawShader(current.entry, event);
+      gl.disable(gl.BLEND);
+      if (progress >= 1) {
+        shaderFade = null;
+        previous = null;
+      }
+    }
+
+    function drawShader(entry, event) {
+      var u = entry.uniforms;
+      var age = event ? event.age : -1;
+      gl.useProgram(entry.program);
+      gl.uniform2f(u.uRes, canvas.width, canvas.height);
+      gl.uniform1f(u.uTime, sceneTime);
+      gl.uniform1f(u.uDark, dark);
+      gl.uniform1f(u.uIntensity, intensity(sceneTime));
+      gl.uniform1f(u.uFlash, event && event.type === 'lightning' ? lightningFlash(age) : 0);
+      gl.uniform1f(u.uEvent, age);
+      gl.uniform1f(u.uEventSeed, eventSeed);
+      gl.uniform1f(u.uEnergy, energy);
+      gl.drawArrays(gl.TRIANGLES, 0, 3);
+    }
+
+    function resize() {
+      var ratio = Math.min(Math.max((window.devicePixelRatio || 1) * 0.6, 0.6), 1.2);
+      var width = Math.max(1, canvas.clientWidth * ratio);
+      var height = Math.max(1, canvas.clientHeight * ratio);
+      var scale = Math.min(1, Math.sqrt(MAX_PIXELS / (width * height)));
+      width = Math.round(width * scale);
+      height = Math.round(height * scale);
+      if (canvas.width !== width || canvas.height !== height) {
+        canvas.width = width;
+        canvas.height = height;
+      }
+    }
+
+    // Weather slowly swells and eases so long sessions never settle into one state.
+    function intensity(t) {
+      return clamp(0.56 + 0.2 * Math.sin(t / 97) + 0.12 * Math.sin(t / 41 + 1.3), 0.2, 0.95);
+    }
+
+    // The room's rare event: scheduled at random while playing, and at night for the
+    // events that need the dark. Returns { type, age } while one runs, else null.
+    function updateEvent(timestamp) {
+      var type = current.event;
+      if (!type) return null;
+      var spec = EVENTS[type];
+      if (eventStart < 0) {
+        var allowed = running && speed > 0.9 && (!spec.night || dark > 0.6);
+        if (!eventPending) {
+          if (!allowed) {
+            nextEventAt = 0;
+            return null;
+          }
+          if (!nextEventAt) nextEventAt = timestamp + randomBetween(spec.every[0], spec.every[1]);
+          if (timestamp < nextEventAt) return null;
+        }
+        eventPending = false;
+        eventStart = timestamp;
+        eventSeed = Math.random();
+        nextEventAt = 0;
+        if (options.onEvent) options.onEvent(type, eventSeed);
+      }
+      var age = (timestamp - eventStart) / 1000;
+      if (age > spec.seconds) {
+        eventStart = -1;
+        return null;
+      }
+      return { type: type, age: age };
+    }
+
+    function triggerEvent() {
+      if (!current || !current.event || eventStart >= 0) return;
+      eventPending = true;
+      requestFrame();
+    }
+
+    function lightningFlash(age) {
+      return pulse(age, 0, 0.55) + pulse(age, 0.13, 0.3) + pulse(age, 0.34, 0.42);
+    }
+
+    function destroy() {
+      destroyed = true;
+      stop();
+      canvas.removeEventListener('webglcontextlost', onContextLost);
+      canvas.removeEventListener('webglcontextrestored', onContextRestored);
+      window.removeEventListener('resize', requestFrame);
+      if (stats) stats.remove();
+    }
+
+    return {
+      setShader: setShader,
+      setRunning: setRunning,
+      setCover: setCover,
+      setPalette: setPalette,
+      setDark: setDark,
+      intensity: function () { return intensity(sceneTime); },
+      triggerEvent: triggerEvent,
+      destroy: destroy,
+    };
+  }
+
+  // Helpers -------------------------------------------------------------------
+
+  function getContext(canvas) {
+    var attributes = {
+      alpha: false,
+      antialias: false,
+      depth: false,
+      stencil: false,
+      preserveDrawingBuffer: false,
+      powerPreference: 'low-power',
+    };
+    try {
+      return canvas.getContext('webgl', attributes) || canvas.getContext('experimental-webgl', attributes);
+    } catch (error) {
+      return null;
+    }
+  }
+
+  function buildProgram(gl, vertexSource, fragmentSource) {
+    var program = gl.createProgram();
+    gl.attachShader(program, compileShader(gl, gl.VERTEX_SHADER, vertexSource));
+    gl.attachShader(program, compileShader(gl, gl.FRAGMENT_SHADER, fragmentSource));
+    gl.bindAttribLocation(program, 0, 'aPosition');
+    gl.linkProgram(program);
+    if (!gl.getProgramParameter(program, gl.LINK_STATUS)) {
+      throw new Error('Shader link failed: ' + gl.getProgramInfoLog(program));
+    }
+    return program;
+  }
+
+  function compileShader(gl, type, source) {
+    var shader = gl.createShader(type);
+    gl.shaderSource(shader, source);
+    gl.compileShader(shader);
+    if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
+      throw new Error('Shader compile failed: ' + gl.getShaderInfoLog(shader));
+    }
+    return shader;
+  }
+
+  function createTexture(gl, mipmapped) {
+    var texture = gl.createTexture();
+    gl.bindTexture(gl.TEXTURE_2D, texture);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, mipmapped ? gl.LINEAR_MIPMAP_LINEAR : gl.LINEAR);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+    return texture;
+  }
+
+  function createArtCanvases() {
+    var art = {};
+    [['sharp', SHARP_SIZE], ['blur', BLUR_SIZE], ['fromSharp', SHARP_SIZE], ['fromBlur', BLUR_SIZE],
+      ['toSharp', SHARP_SIZE], ['toBlur', BLUR_SIZE], ['target', SHARP_SIZE]].forEach(function (entry) {
+      var canvas = document.createElement('canvas');
+      canvas.width = entry[1];
+      canvas.height = entry[1];
+      art[entry[0]] = canvas;
+      art[entry[0] + 'Ctx'] = canvas.getContext('2d', { willReadFrequently: entry[0] === 'toBlur' });
+    });
+    return art;
+  }
+
+  // Square crop from the middle of the image, like object-fit: cover.
+  function drawCover(canvas, image) {
+    var ctx = canvas.getContext('2d');
+    var side = Math.min(image.naturalWidth, image.naturalHeight);
+    var sx = (image.naturalWidth - side) / 2;
+    var sy = (image.naturalHeight - side) / 2;
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.drawImage(image, sx, sy, side, side, 0, 0, canvas.width, canvas.height);
+    return canvas;
+  }
+
+  // Soft color fields from the track palette when there is no cover.
+  function drawPalette(canvas, colors) {
+    var ctx = canvas.getContext('2d');
+    var size = canvas.width;
+    var base = ctx.createLinearGradient(0, 0, size, size);
+    base.addColorStop(0, colors[0]);
+    base.addColorStop(1, colors[1] || colors[0]);
+    ctx.fillStyle = base;
+    ctx.fillRect(0, 0, size, size);
+    [[0.25, 0.7, colors[1]], [0.75, 0.3, colors[2]], [0.6, 0.85, colors[0]]].forEach(function (blob) {
+      if (!blob[2]) return;
+      var glow = ctx.createRadialGradient(blob[0] * size, blob[1] * size, 0, blob[0] * size, blob[1] * size, size * 0.45);
+      glow.addColorStop(0, blob[2]);
+      glow.addColorStop(1, 'rgba(0,0,0,0)');
+      ctx.fillStyle = glow;
+      ctx.fillRect(0, 0, size, size);
+    });
+    return canvas;
+  }
+
+  function blend(ctx, from, to, size, amount) {
+    ctx.globalAlpha = 1;
+    ctx.clearRect(0, 0, size, size);
+    ctx.drawImage(from, 0, 0);
+    ctx.globalAlpha = amount;
+    ctx.drawImage(to, 0, 0);
+    ctx.globalAlpha = 1;
+  }
+
+  // Repeated box blur approximates a gaussian; the canvas is tiny so this is cheap.
+  function blurCanvas(ctx, size, radius, passes) {
+    var image = ctx.getImageData(0, 0, size, size);
+    var data = image.data;
+    var scratch = new Uint8ClampedArray(data.length);
+    for (var pass = 0; pass < passes; pass += 1) {
+      boxBlur(data, scratch, size, radius, 4, size * 4);
+      boxBlur(scratch, data, size, radius, size * 4, 4);
+    }
+    ctx.putImageData(image, 0, 0);
+  }
+
+  // One-dimensional blur along `step`, repeated for every line along `lineStep`.
+  function boxBlur(source, target, size, radius, step, lineStep) {
+    var span = radius * 2 + 1;
+    for (var line = 0; line < size; line += 1) {
+      var origin = line * lineStep;
+      for (var channel = 0; channel < 4; channel += 1) {
+        var sum = 0;
+        for (var k = -radius; k <= radius; k += 1) {
+          sum += source[origin + clampIndex(k, size) * step + channel];
+        }
+        for (var i = 0; i < size; i += 1) {
+          target[origin + i * step + channel] = sum / span;
+          sum += source[origin + clampIndex(i + radius + 1, size) * step + channel];
+          sum -= source[origin + clampIndex(i - radius, size) * step + channel];
+        }
+      }
+    }
+  }
+
+  function clampIndex(index, size) {
+    return index < 0 ? 0 : (index >= size ? size - 1 : index);
+  }
+
+  // Debug overlay (?scene_stats=1): frame rate, canvas size, energy; tap it to fire the
+  // room's event without waiting for one.
+  function createStats(canvas, onTap) {
+    var node = document.createElement('div');
+    node.style.cssText = 'position:fixed;left:8px;top:8px;z-index:9999;padding:4px 6px;'
+      + 'font:11px/1.2 ui-monospace,monospace;color:#fff;background:rgba(0,0,0,.55);border-radius:4px;'
+      + 'cursor:pointer';
+    node.title = 'Tap to trigger the scene event';
+    node.addEventListener('click', onTap);
+    document.body.appendChild(node);
+    var frames = 0;
+    var windowStart = now();
+    return {
+      frame: function (energy) {
+        frames += 1;
+        var elapsed = now() - windowStart;
+        if (elapsed < 1000) return;
+        node.textContent = Math.round((frames * 1000) / elapsed) + ' fps · ' + canvas.width + '×' + canvas.height
+          + ' · energy ' + energy.toFixed(2);
+        frames = 0;
+        windowStart = now();
+      },
+      remove: function () { node.remove(); },
+    };
+  }
+
+  function pulse(t, at, strength) {
+    return t < at ? 0 : strength * Math.exp(-(t - at) * 13);
+  }
+
+  function approach(value, target, step) {
+    if (value < target) return Math.min(target, value + step);
+    return Math.max(target, value - step);
+  }
+
+  function clamp(value, min, max) {
+    return Math.min(max, Math.max(min, value));
+  }
+
+  function randomBetween(min, max) {
+    return min + Math.random() * (max - min);
+  }
+
+  function now() {
+    return window.performance && performance.now ? performance.now() : Date.now();
+  }
+
+  window.RadioScene = { create: create };
+})();

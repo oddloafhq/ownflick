@@ -1,0 +1,128 @@
+{% extends "base.html" %}
+{% block extra_head %}
+<link rel="stylesheet" href="{{ static_asset('flow.css') }}">
+{% endblock %}
+
+{% block content %}
+<div id="container">
+  <div id="feed-container">
+    <div id="video-start-cover" class="video-start-cover" aria-hidden="true">
+      <div class="video-start-cover-spinner" aria-hidden="true"></div>
+    </div>
+  </div>
+
+  <div id="flow-state" class="flow-state" data-kind="loading" aria-live="polite" aria-hidden="true">
+    <div class="flow-state-card">
+      <div class="flow-state-spinner" aria-hidden="true"></div>
+      <div id="flow-state-title" class="flow-state-title">Preparing your media</div>
+      <div id="flow-state-detail" class="flow-state-detail"></div>
+      <div id="flow-state-actions" class="flow-state-actions" hidden>
+        <button id="flow-state-retry" class="flow-state-btn primary" type="button" hidden>Try Again</button>
+        <button id="flow-state-next" class="flow-state-btn primary" type="button" hidden>Next</button>
+        <a id="flow-state-library" class="flow-state-btn" href="/library" hidden>Open Library</a>
+      </div>
+    </div>
+  </div>
+
+  <div id="overlay-layer"></div>
+  <a id="flow-mode" class="flow-mode" href="/flow" aria-label="Leave Forgotten" hidden>Forgotten <span aria-hidden="true">×</span></a>
+  <div id="flow-hud" aria-live="polite"></div>
+
+  <div id="play-status-icon">
+    <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="currentColor" stroke="none">
+      <polygon points="5 3 19 12 5 21 5 3"></polygon>
+    </svg>
+  </div>
+
+  <div id="custom-controls">
+    <span class="time-display" id="time-current">00:00</span>
+    <div class="progress-container">
+      <input type="range" id="video-progress" min="0" max="100" step="0.1" value="0">
+      <div class="progress-track"></div>
+      <div class="progress-fill" id="progress-fill"></div>
+    </div>
+    <span class="time-display" id="time-total">00:00</span>
+  </div>
+
+  <div class="controls-sidebar" id="controls">
+    <div class="image-tool-wrap" id="speed-tool-wrap">
+      <div class="zoom-options speed-options" id="speed-options">
+        <button type="button" class="zoom-btn" data-rate="0.75">0.75x</button>
+        <button type="button" class="zoom-btn active" data-rate="1">1x</button>
+        <button type="button" class="zoom-btn" data-rate="1.25">1.25x</button>
+        <button type="button" class="zoom-btn" data-rate="1.5">1.5x</button>
+        <button type="button" class="zoom-btn" data-rate="2">2x</button>
+      </div>
+      <button type="button" class="action-btn speed-btn" id="speed-btn" title="Playback speed" aria-expanded="false">1x</button>
+    </div>
+
+    <button type="button" class="action-btn" id="caption-btn" title="Generate Title" hidden>
+      <i data-feather="zap"></i>
+    </button>
+
+    <div class="image-tool-wrap" id="magnifier-tool-wrap" hidden>
+      <div class="zoom-options" id="zoom-options">
+        <button type="button" class="zoom-btn active" data-level="2.5">2.5x</button>
+        <button type="button" class="zoom-btn" data-level="5">5x</button>
+      </div>
+      <button type="button" class="action-btn" id="magnifier-toggle" title="Magnifier">
+        <i data-feather="search"></i>
+      </button>
+    </div>
+
+    <a href="#" class="action-btn" id="favorite-btn" data-value="">
+      <svg class="heart-outline" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path></svg>
+      <svg class="heart-filled" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="currentColor" stroke="none"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path></svg>
+    </a>
+
+    <button type="button" class="action-btn" id="collection-btn" title="Add to Collection">
+      <i data-feather="bookmark"></i>
+      <span class="collection-count" id="collection-count">0</span>
+    </button>
+
+    <a href="#" class="action-btn" id="info-btn">
+      <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
+    </a>
+  </div>
+
+  <div class="caption-panel is-hidden" id="caption-panel">
+    <div class="caption-title hidden" id="caption-title"></div>
+    <div class="caption-tags" id="caption-tags"></div>
+  </div>
+
+  <div class="magnifier" id="magnifier">
+    <div class="mag-badge" id="mag-badge">2.5x</div>
+  </div>
+</div>
+
+<div id="collection-modal" class="collection-modal" aria-hidden="true">
+  <div class="collection-modal-card">
+    <div class="coll-drag-handle"></div>
+    <div class="collection-modal-header">
+      <div class="collection-modal-title-row">
+        <h3>Add to Collection</h3>
+        <button id="collection-modal-close" type="button" class="collection-modal-close">
+          <i data-feather="x"></i>
+        </button>
+      </div>
+      <div id="collection-modal-meta" class="collection-modal-meta">Not in any collections</div>
+    </div>
+    <div id="collection-list" class="collection-modal-list"></div>
+    <div class="collection-modal-create">
+      <input id="collection-name-input" type="text" maxlength="80" placeholder="New collection name" />
+      <button id="collection-create-btn" type="button">Create</button>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_body %}
+<script src="{{ static_asset('flow_ui_shared.js') }}"></script>
+<script src="{{ static_asset('collection_picker.js') }}"></script>
+<script src="{{ static_asset('flow_state_controller.js') }}"></script>
+<script src="{{ static_asset('flow_session.js') }}"></script>
+<script src="{{ static_asset('flow_actions_shared.js') }}"></script>
+<script src="{{ static_asset('flow_media_actions_controller.js') }}"></script>
+<script src="{{ static_asset('hammer.min.js') }}"></script>
+<script src="{{ static_asset('flow_page_controller.js') }}"></script>
+{% endblock %}

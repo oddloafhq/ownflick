@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+
+{% block extra_head %}
+<link rel="stylesheet" href="{{ static_asset('collections.css') }}">
+{% endblock %}
+
+{% block content %}
+<main class="saved-page collections-shell">
+  {% set saved_active = 'collections' %}
+  {% include '_saved_header.html' %}
+  <section id="collections-grid" class="saved-content collection-grid"></section>
+  <section id="collections-state" class="collections-state" aria-live="polite">
+    <div>
+      <div class="collections-state-icon"><i data-feather="loader"></i></div>
+      <div id="collections-state-title" class="collections-state-title">Loading collections</div>
+      <p id="collections-state-copy" class="collections-state-copy">Your organization stays on this device.</p>
+      <button id="collections-state-action" class="ghost-chip collections-state-action" type="button" hidden></button>
+    </div>
+  </section>
+</main>
+
+<div id="create-modal" class="modal-mask" aria-hidden="true">
+  <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="create-modal-title">
+    <h2 id="create-modal-title" class="modal-title">New Collection</h2>
+    <input id="create-name" class="field mb-2" type="text" maxlength="80" placeholder="For example: Inspiration" />
+    <textarea id="create-description" class="field" rows="3" maxlength="280" placeholder="Optional description"></textarea>
+    <div class="modal-actions">
+      <button id="cancel-create" class="ghost-chip" type="button">Cancel</button>
+      <button id="submit-create" class="ghost-chip modal-primary" type="button">Create</button>
+    </div>
+  </div>
+</div>
+
+<div id="rename-modal" class="modal-mask" aria-hidden="true">
+  <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="rename-modal-title">
+    <h2 id="rename-modal-title" class="modal-title">Rename Collection</h2>
+    <input id="rename-name" class="field" type="text" maxlength="80" placeholder="Enter a new name" />
+    <div class="modal-actions">
+      <button id="cancel-rename" class="ghost-chip" type="button">Cancel</button>
+      <button id="submit-rename" class="ghost-chip modal-primary" type="button">Save</button>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_body %}
+<script src="{{ static_asset('collections_page_controller.js') }}"></script>
+{% endblock %}
