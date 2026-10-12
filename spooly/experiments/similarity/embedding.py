@@ -470,7 +470,7 @@ class ImageVectorService:
             "image_max_size": int(config.get("image_max_size") or 0),
             "image_quality": int(config.get("image_quality") or 0),
             "input_kind": "image",
-            "indexed_at": datetime.datetime.utcnow().isoformat() + "Z",
+            "indexed_at": datetime.datetime.now(datetime.timezone.utc).replace(tzinfo=None).isoformat() + "Z",
         }
         self.vector_index.upsert_image(uri=uri, embedding=embedding, metadata=metadata)
 

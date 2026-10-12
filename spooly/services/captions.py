@@ -351,7 +351,7 @@ class CaptionService:
             "model": self.model,
             "provider": "openai",
             "base_url": self.base_url or "",
-            "created_at": datetime.datetime.utcnow().isoformat() + "Z",
+            "created_at": datetime.datetime.now(datetime.timezone.utc).replace(tzinfo=None).isoformat() + "Z",
             "prompt_version": PROMPT_TEMPLATE_VERSION,
             "prompt_hash": compute_prompt_hash(effective_prompt),
         }

@@ -129,7 +129,7 @@ class EmbeddingConfigStore:
 
     def set(self, value: dict[str, Any]) -> dict[str, Any]:
         payload = dict(value)
-        payload["updated_at"] = datetime.datetime.utcnow().isoformat() + "Z"
+        payload["updated_at"] = datetime.datetime.now(datetime.timezone.utc).replace(tzinfo=None).isoformat() + "Z"
         self._write(payload)
         return payload
 

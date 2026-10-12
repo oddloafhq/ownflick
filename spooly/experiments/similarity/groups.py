@@ -34,7 +34,7 @@ class SQLiteSimilarityGroupStore:
         exclusive: bool = True,
         kind: str = SIMILARITY_KIND_IMAGE_EMBEDDING,
     ) -> int:
-        now = datetime.datetime.utcnow().isoformat() + "Z"
+        now = datetime.datetime.now(datetime.timezone.utc).replace(tzinfo=None).isoformat() + "Z"
         saved = 0
         with self.database.connect() as conn:
             conn.execute("DELETE FROM media_similarity_groups WHERE kind = ?", (kind,))

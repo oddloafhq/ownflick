@@ -19,6 +19,8 @@ waitress = "^3.0.2"
 pyyaml = "^6.0"
 requests = "^2.33.0"
 pillow = "^12.3.0"
+
+[tool.poetry.group.dev.dependencies]
 pytest = "^9.0.3"
 
 [build-system]

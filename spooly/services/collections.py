@@ -16,7 +16,7 @@ MAX_COLLECTION_ITEMS_MUTATION = 200
 
 
 def _utc_now_iso() -> str:
-    return datetime.datetime.utcnow().replace(microsecond=0).isoformat() + "Z"
+    return datetime.datetime.now(datetime.timezone.utc).replace(tzinfo=None).replace(microsecond=0).isoformat() + "Z"
 
 
 def _normalize_uri(value: Any) -> str:
