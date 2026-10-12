@@ -1,6 +1,6 @@
 {
   "name": "spooly",
-  "version": "0.8.45",
+  "version": "0.8.46",
   "description": "A private, self-hosted feed for your videos, photos, and music",
   "scripts": {
     "build-css": "tailwindcss -i ./spooly/static/input.css -o ./spooly/static/output.css --watch",

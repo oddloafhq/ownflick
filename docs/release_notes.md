@@ -1,10 +1,11 @@
 # Release notes
 
-## Unreleased
+## v0.8.46 (2026-10-12) — Docker and distribution
 
 - Docker image for `linux/amd64` and `linux/arm64` on GHCR, with `ffmpeg`, `yt-dlp`, `gallery-dl` and Deno, plus an example `compose.yaml`.
 - `config.yaml` in the `SPOOLY_INSTANCE` data directory is read first.
 - Guide for running Spooly on Android with Termux.
+- Product demo and share images made from the local demo library.
 - `pytest` is no longer installed with the package.
 
 ## v0.8.45 (2026-10-12) — Initial Spooly release

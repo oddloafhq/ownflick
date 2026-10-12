@@ -28,6 +28,9 @@ selected images to the provider you configure.
 Local browsing and playback work without internet access. URL downloads and
 remote AI features require a connection.
 
+[Watch the 24-second demo](https://github.com/oddloafhq/spooly/releases/download/v0.8.46/spooly-demo.mp4)
+· [Screenshots and media kit](docs/promo/README.md)
+
 ## Quick start
 
 Requires Python 3.10+.
