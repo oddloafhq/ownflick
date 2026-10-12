@@ -1,11 +1,11 @@
 [tool.poetry]
 name = "spooly"
 version = "0.8.45"
-description = "A local media server that combines the features of TikTok and Pinterest"
-authors = ["Oddloaf <oddloafhq@users.noreply.github.com>"]
+description = "A private, self-hosted feed for your videos, photos, and music"
+authors = ["Oddloaf <hello@oddloaf.dev>"]
 readme = "README.md"
 license = "MIT"
-homepage = "https://github.com/oddloafhq/spooly"
+homepage = "https://oddloaf.dev"
 repository = "https://github.com/oddloafhq/spooly"
 keywords = ["spooly", "tiktok", "jellyfin", "vlc"]
 

@@ -1,64 +1,75 @@
-# Spooly 标志
+# Spooly brand
 
-本目录是 Spooly 开源项目（Server、Web UI、README、PyPI）的标志资源。
+Logo assets for Spooly (server, web UI, README, PyPI).
 
-## 标志语义
+## Meaning
 
-小写 **t** 的竖笔向下书写，收成一个钩，指向一个橙色圆点。钩和点之间只留一线空隙，
-读起来是“一笔写完，落下一滴”：t 取自 Spooly，圆点表示“就在这里”，也就是媒体
-一直留在你自己的机器上。
+A spool seen from the side: one line wound around a hub, with the loose end
+running off along the ground. The line is your library, the hub is where it
+lives (your own machine), and the loose end is the feed you scroll.
 
-## 构造
+## Construction
 
-- 画在 24 × 24 网格上，描边 2、圆角端点、圆角连接，和 Web UI 使用的 Feather 图标
-  是同一套几何，所以可以直接放进导航栏。
-- 竖笔 `(9, 3.5) → (9, 15.5)`，钩为半径 3 的四分之一圆弧，止于 `(12, 18.5)`。
-- 横杠 `(5.5, 8.5) → (12.5, 8.5)`。
-- 圆点圆心 `(16.6, 18.5)`，半径 2.1。
-- 整套标志里只有圆点使用强调色。
+- Drawn on a 24 × 24 grid with a 2.5-unit stroke, round caps and joins.
+- Winding: an arc of radius 7.5 around `(11, 12)`, starting at the ground
+  point `(11, 19.5)` and running clockwise for 292°, so it stops at
+  `(17.95, 14.81)` and leaves a gap above the tail.
+- Tail: a straight line along the ground from `(11, 19.5)` to `(20.5, 19.5)`.
+- Hub: a dot at `(11, 12)`, radius 2.25.
+- Only the hub carries the accent color.
 
-几何只在 `scripts/build_brand.py` 里定义一次，所有文件都由它生成。Web 页面内联的
-SVG（`spooly/templates/brand_mark.html`）是同一组路径的副本，修改时要同步。
+The geometry is defined once in `../scripts/build_brand.py`; every file here is generated
+from it. `../spooly/templates/brand_mark.html` is a copy of the same path for inlining in
+templates.
 
-## 色彩
+## Color
 
-| 角色 | 浅色背景 | 深色背景 |
+| Role | Light surface | Dark surface |
 | --- | --- | --- |
-| 标志线条 | `#36594F` | `#B8CCBF` |
-| 圆点 | `#D9633B` | `#D9633B` |
-| 字标 | `#23231F` | `#E9E7DF` |
-| 头像底色 | `#F7F6F2` | — |
+| Line | `#141414` | `#E9E7DF` |
+| Hub dot | `#3F5FC4` | `#7F96E8` |
+| Wordmark | `#141414` | `#E9E7DF` |
+| Icon tile | `#3F5FC4` with a `#F4F1EA` mark | same |
 
-## 字标
+The blue is the only brand color. On icon tiles (avatar, touch icon, `.ico`)
+it becomes the background and the whole mark, hub included, turns paper white.
 
-写作 tik**Local**：`tik` 用 Source Serif 4 Light（300），`Local` 用 Semibold（600），
-字距 −0.02em。字重对比刻意强调 “Local”，同时削弱和 TikTok 的联想。字形已经转为路径，
-使用时不需要安装字体。Source Serif 4 采用 SIL Open Font License 1.1 授权。
+## Wordmark
 
-## 文件
+Lowercase `spooly` in Outfit Medium (500), tracking −0.02em, converted to
+outlines so no font is needed. Outfit is licensed under the SIL Open Font
+License 1.1. In the lockup the tail sits on the text baseline and the spool
+rises to the height of the `l`.
 
-| 文件 | 用途 |
+## Files
+
+| File | Use |
 | --- | --- |
-| `spooly-mark.svg` | 标志，浅色背景 |
-| `spooly-mark-dark.svg` | 标志，深色背景 |
-| `spooly-mark-mono.svg` | 单色标志，使用 `currentColor`，可以内联后随文字着色 |
-| `spooly-lockup.svg` | 标志 + 字标，浅色背景（README 头部） |
-| `spooly-lockup-dark.svg` | 标志 + 字标，深色背景 |
-| `spooly-avatar-512.png` | 社交头像、GitHub 组织或仓库图片 |
-| `../spooly/static/brand/favicon.svg` | 浏览器标签图标，会跟随系统深浅色切换 |
-| `../spooly/static/brand/favicon.ico` | 旧浏览器和 `/favicon.ico`（16/32/48px，16px 版描边加粗到 2.5） |
-| `../spooly/static/brand/apple-touch-icon.png` | iOS 添加到主屏幕（180px） |
+| `spooly-mark.svg` | Mark on light surfaces |
+| `spooly-mark-dark.svg` | Mark on dark surfaces |
+| `spooly-mark-mono.svg` | One-color mark using `currentColor` |
+| `spooly-lockup.svg` | Mark + wordmark on light surfaces (README header) |
+| `spooly-lockup-dark.svg` | Mark + wordmark on dark surfaces |
+| `spooly-avatar-512.png` | Social avatar, GitHub org or repo image; safe under a circular crop |
+| `../spooly/templates/brand_mark.html` | Inline SVG for templates; the line follows the text color, the dot reads `--brand-dot` |
+| `../spooly/static/brand/favicon.svg` | Tab icon, follows the system light/dark setting |
+| `../spooly/static/brand/favicon.ico` | Safari and `/favicon.ico` (16/32/48px), on a blue tile so it reads on any tab color |
+| `../spooly/static/brand/apple-touch-icon.png` | iOS home screen (180px) |
 
-## 使用规则
+## Usage
 
-- 最小尺寸 16px；16px 以下只使用 `.ico` 里专门加粗的版本。
-- 四周留白不少于 2 个网格单位（标志尺寸的 1/12）。
-- 不要拉伸、旋转、加阴影或描边，也不要改变圆点的颜色和位置。
+- Minimum size 16px.
+- Keep clear space of at least 2 grid units (1/12 of the mark) on every side.
+- Do not stretch, rotate, outline or add shadows, and do not move or recolor
+  the hub dot outside the values above.
+- In dark themes set `--brand-dot: #7F96E8` so the inline mark's dot stays
+  visible.
 
-## 重新生成
+## Regenerate
+
+Run from the repository root:
 
 ```bash
-pip install fonttools brotli pillow
-npm pack @fontsource/source-serif-4 && tar xzf fontsource-source-serif-4-*.tgz
-python scripts/build_brand.py --font-dir package/files
+npm pack @fontsource/outfit && tar xzf fontsource-outfit-*.tgz
+uv run --with fonttools --with brotli --with pillow scripts/build_brand.py --font-dir package/files
 ```

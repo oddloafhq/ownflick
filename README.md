@@ -7,7 +7,7 @@
 
 <p align="center">
   <strong>Your own TikTok for the videos and photos you already have.</strong><br>
-  Self-hosted, offline, no account, no cloud.
+  Self-hosted. No cloud account. Your library stays with you.
 </p>
 
 <p align="center">
@@ -22,13 +22,22 @@
 Spooly turns a folder of media into a private feed. Run one command on your
 computer or NAS, open it on your phone, and swipe through your own videos and
 photos full screen — or browse them as a Pinterest-style grid and a year/month
-timeline. Nothing leaves your machine.
+timeline. Browsing and playback stay on your server; optional AI features send
+selected images to the provider you configure.
+
+Local browsing and playback work without internet access. URL downloads and
+remote AI features require a connection.
 
 ## Quick start
 
+Run from source with Python 3.10+ and Poetry. The PyPI package currently
+reserves the name; the full application has not been released there yet.
+
 ```bash
-pip install spooly
-spooly ~/Videos
+git clone https://github.com/oddloafhq/spooly.git
+cd spooly
+poetry install
+poetry run spooly ~/Videos
 ```
 
 Open `http://<your-computer>:8000` on any phone, tablet, or browser on the same
@@ -230,19 +239,6 @@ The CLI owns the download manager. When hosting `create_app()` yourself, call
 
 </details>
 
-<details>
-<summary><strong>Upgrading from versions with built-in HTTPS or PWA</strong></summary>
-
-Built-in HTTPS, certificate management, PWA installation and offline caching were
-removed. Remove `https`, `tls_cert`, `tls_key` and `hostnames` from the YAML
-configuration; active old TLS settings stop startup rather than silently switching
-to HTTP. The `--https`, `--tls-cert`, `--tls-key`, `--hostname` options, `tls`
-commands and the `[https]` extra are gone. Files under `~/.spooly/tls/` are left
-untouched. Revisit the same address once to retire the old service worker; old
-home-screen shortcuts can be removed by hand.
-
-</details>
-
 ## Documentation
 
 - [Docs index](docs/README.md)
@@ -255,15 +251,16 @@ home-screen shortcuts can be removed by hand.
 Bug reports, ideas and pull requests are welcome on
 [GitHub](https://github.com/oddloafhq/spooly/). To refresh the screenshots, serve a
 demo folder without sign-in and run the capture script (it uses your installed
-Chrome):
+Chrome, or the executable set by `CHROME_PATH`):
 
 ```bash
 npm install
-FLASK_AUTH_ENABLED=false spooly demo-media --port 8793
+SPOOLY_INSTANCE=/tmp/spooly-demo FLASK_AUTH_ENABLED=false spooly demo-media --host 127.0.0.1 --port 8793
 node scripts/screenshots.mjs
 ```
 
-Contact: [oddloafhq@users.noreply.github.com](mailto:oddloafhq@users.noreply.github.com)
+Made by [Oddloaf](https://oddloaf.dev). Contact [hello@oddloaf.dev](mailto:hello@oddloaf.dev),
+or [open an issue](https://github.com/oddloafhq/spooly/issues).
 
 ## License
 

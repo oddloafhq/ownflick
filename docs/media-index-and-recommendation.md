@@ -37,7 +37,7 @@
 - `FavoriteService`：读改写在同一实例锁内完成，原子替换防止半写入；损坏或不可写文件不得转换为成功。收藏 API 失败返回 503，Flow/Gallery 回滚乐观状态并允许重试。
 - `RecommendService.get_weighted_selection()`：从媒体索引读取候选并执行轻量加权选择。
 - `ThumbnailService.get_thumbnail()`：读取有效缓存或同步生成单规格缩略图。
-- `ThumbnailService.get_radio_artwork()`：Web 与原生 Radio 共用内嵌封面优先、生成封面降级；各 HTTP 入口保留自己的访问校验。`cache_stats()` / `clear_cache()` 统一缓存目录操作，清理不删除媒体或映射。
+- `ThumbnailService.get_radio_artwork()`：Web Radio 优先使用内嵌封面，再降级到生成封面；HTTP 入口保留访问校验。`cache_stats()` / `clear_cache()` 统一缓存目录操作，清理不删除媒体或映射。
 - `ThumbnailService.generate_thumbnail()`：CLI、Web 按需生成和手动选帧共用的生成入口；临时文件完成后原子替换缓存，失败保留已有缓存。CLI 默认优先时长 20% 处，Web 保留 5/1/0.1 秒尝试，显式选帧支持 0 秒。
 - `/api/feed/mix`：按 seed 混排并分页；候选和权重不变时可复现，主题与本页图集不改变基础媒体分页边界。
 - `/api/library/items`：返回媒体库分页数据。

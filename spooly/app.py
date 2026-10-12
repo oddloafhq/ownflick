@@ -147,9 +147,6 @@ def create_app(test_config=None):
                 response.headers['Cache-Control'] = 'public, max-age=31536000, immutable'
             else:
                 response.headers['Cache-Control'] = 'public, max-age=0, must-revalidate'
-        elif endpoint == 'retired_service_worker':
-            response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
-            response.headers['Service-Worker-Allowed'] = '/'
         elif request.path.startswith('/api/'):
             response.headers['Cache-Control'] = 'private, no-store'
         elif request.path.startswith('/media'):
@@ -265,13 +262,6 @@ def create_app(test_config=None):
             Path(app.static_folder) / 'brand' / 'favicon.ico',
             mimetype='image/vnd.microsoft.icon',
             max_age=86400,
-        )
-
-    @app.get('/service-worker.js')
-    def retired_service_worker():
-        return send_file(
-            Path(app.static_folder) / 'service_worker.js',
-            mimetype='application/javascript',
         )
 
     return app

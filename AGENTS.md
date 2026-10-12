@@ -35,3 +35,9 @@
 ## Application Notes
 
 Spooly is maintained by Oddloaf. The Flask application factory in `spooly/app.py` registers routes from `spooly/web/`; shared media services live in `spooly/services/`. Configuration priority is CLI arguments, environment variables, config file, then defaults. Browser controllers and page styles live in `spooly/static/`; templates pass boot data with minimal inline scripts.
+
+## Product Identity
+- Public product name: Spooly. Maintainer: Oddloaf (`github.com/oddloafhq`, `https://oddloaf.dev`, `hello@oddloaf.dev`).
+- Use the Oddloaf identity for public metadata, documentation, and release materials; keep unrelated personal identities out of these surfaces.
+- This repository contains the server and Web UI. Native clients and device-pairing APIs are excluded pending a separate product design.
+- Brand geometry is defined in `scripts/build_brand.py`; generated assets live in `brand/`, `spooly/static/brand/`, and `spooly/templates/brand_mark.html`.

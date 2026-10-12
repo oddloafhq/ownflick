@@ -1,8 +1,8 @@
 // README screenshots from a running Spooly that serves demo-media/ without login:
-//   FLASK_AUTH_ENABLED=false spooly demo-media --port 8793
+//   SPOOLY_INSTANCE=/tmp/spooly-demo FLASK_AUTH_ENABLED=false spooly demo-media --host 127.0.0.1 --port 8793
 //   node scripts/screenshots.mjs
 import { chromium } from 'playwright-core';
-import { readFileSync } from 'node:fs';
+import { mkdirSync, readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 
 const base = process.env.BASE_URL || 'http://127.0.0.1:8793';
@@ -32,7 +32,10 @@ async function showFlowItem(page, name) {
   throw new Error(`Flow never showed ${name}`);
 }
 
-const browser = await chromium.launch({ channel: 'chrome' });
+mkdirSync(out, { recursive: true });
+const browser = await chromium.launch(process.env.CHROME_PATH
+  ? { executablePath: process.env.CHROME_PATH }
+  : { channel: 'chrome' });
 for (const shot of shots) {
   const context = await browser.newContext({ ...shot.device, colorScheme: 'light', reducedMotion: 'reduce' });
   const page = await context.newPage();

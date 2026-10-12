@@ -15,7 +15,6 @@
     <script src="{{ static_asset('ui_feedback.js') }}"></script>
     <script src="{{ static_asset('playback_resume.js') }}"></script>
     <script src="{{ static_asset('page_transitions.js') }}"></script>
-    <script src="{{ url_for('static', filename='retire_pwa.js') }}"></script>
     {% if auth_enabled %}<script src="{{ static_asset('csrf_fetch.js') }}"></script>{% endif %}
     <link rel="stylesheet" href="{{ static_asset('base.css') }}">
     {% block extra_head %}{% endblock %}
@@ -30,8 +29,8 @@
       </nav>
       {% else %}
       <a class="app-wordmark" href="/" aria-label="Return home">
-        <span class="app-wordmark-mark">{% include 'brand_mark.html' %}</span>
-        <span><span class="app-wordmark-tik">tik</span>Local</span>
+        <img class="app-wordmark-lockup brand-lockup-light" src="{{ static_asset('brand/spooly-lockup.svg') }}" alt="spooly" width="110">
+        <img class="app-wordmark-lockup brand-lockup-dark" src="{{ static_asset('brand/spooly-lockup-dark.svg') }}" alt="spooly" width="110">
       </a>
       {% endif %}
       <button id="app-nav-menu-trigger" class="mobile-nav-trigger" type="button" aria-label="Open media and tools" aria-expanded="false" aria-controls="app-nav-menu">

@@ -20,16 +20,8 @@ def test_browser_cache_policy_and_media_range(tmp_path):
     assert media.headers['Content-Range'] == 'bytes 2-5/10'
     assert client.get('/install').status_code == 404
     assert client.get('/app.webmanifest').status_code == 404
-
-
-def test_retirement_worker_is_available_before_login(tmp_path, monkeypatch):
-    monkeypatch.setenv('SPOOLY_AUTH_PASSWORD', 'test-only-password')
-    client = create_app({'TESTING': True, 'MEDIA_ROOT': tmp_path, 'AUTH_ENABLED': True}).test_client()
-    worker = client.get('/service-worker.js?v=old-version')
-    assert worker.status_code == 200
-    assert worker.mimetype == 'application/javascript'
-    assert worker.headers['Service-Worker-Allowed'] == '/'
-    assert worker.headers['Cache-Control'] == 'no-cache, no-store, must-revalidate'
+    assert client.get('/service-worker.js').status_code == 404
+    assert client.get('/api/v1/pair').status_code == 404
 
 
 @pytest.mark.parametrize('key,value', [

@@ -113,7 +113,6 @@ def configure_auth(app, auth_store, *, enabled: bool) -> None:
         if request.endpoint in {
             'static',
             'favicon',
-            'retired_service_worker',
         }:
             return None
         if request.endpoint == 'login_view':

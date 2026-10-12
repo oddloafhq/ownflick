@@ -60,7 +60,7 @@ jobs:
 
   publish-pypi:
     name: Upload to PyPI
-    if: startsWith(github.ref, 'refs/tags/') || github.event_name == 'release'
+    if: github.event_name == 'release'
     needs: build
     runs-on: ubuntu-latest
     environment:

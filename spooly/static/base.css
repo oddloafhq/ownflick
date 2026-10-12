@@ -1,5 +1,6 @@
 /* A soft, content-first dock with page-aware material. */
 :root {
+  --brand-dot: #3F5FC4;
   --dock-surface: rgba(29, 29, 27, 0.86);
   --menu-surface: rgba(27, 27, 25, 0.94);
   --dock-border: rgba(255, 255, 255, 0.085);
@@ -293,4 +294,8 @@ body {
 /* Special case for TikTok page which handles its own padding */
 body.immersive {
   padding-bottom: 0 !important;
+}
+
+[data-theme="dark"], [data-nav-context="flow"] {
+  --brand-dot: #7F96E8;
 }
