@@ -3,7 +3,7 @@ import sys
 import pytest
 
 from spooly.app import app_version, create_app
-from spooly.run import main
+from spooly.run import load_config, main
 
 
 def test_browser_cache_policy_and_media_range(tmp_path):
@@ -34,3 +34,17 @@ def test_old_tls_config_does_not_silently_start_http(monkeypatch, capsys, key, v
         main()
     assert stopped.value.code == 2
     assert 'Built-in HTTPS has been removed' in capsys.readouterr().err
+
+
+def test_instance_config_takes_priority(tmp_path, monkeypatch):
+    home = tmp_path / 'home'
+    instance = tmp_path / 'instance'
+    (home / '.config' / 'spooly').mkdir(parents=True)
+    (home / '.config' / 'spooly' / 'config.yaml').write_text('name: Global\n')
+    monkeypatch.setenv('HOME', str(home))
+    monkeypatch.setenv('SPOOLY_INSTANCE', str(instance))
+    assert load_config() == {'name': 'Global'}
+
+    instance.mkdir()
+    (instance / 'config.yaml').write_text('name: Container\nport: 9000\n')
+    assert load_config() == {'name': 'Container', 'port': 9000}

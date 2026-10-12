@@ -27,11 +27,14 @@ def load_config():
     """Load configuration from a file."""
     config = {}
 
-    # Try the supported configuration paths.
+    # Try the supported configuration paths; an isolated instance reads its own first.
     config_paths = [
         Path.home() / '.config' / 'spooly' / 'config.yaml',
         Path.home() / '.spooly' / 'config.yaml',
     ]
+    instance = os.environ.get('SPOOLY_INSTANCE')
+    if instance:
+        config_paths.insert(0, Path(instance).expanduser() / 'config.yaml')
 
     for config_path in config_paths:
         if config_path.exists():

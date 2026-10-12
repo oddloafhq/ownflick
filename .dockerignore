@@ -1,0 +1,7 @@
+*
+!pyproject.toml
+!README.md
+!LICENSE
+!spooly/
+**/__pycache__
+**/*.py[cod]

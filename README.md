@@ -40,6 +40,25 @@ spooly ~/Videos
 Open `http://<your-computer>:8000` on any phone, tablet, or browser on the same
 network. The first start prints an access password in the terminal.
 
+### Docker
+
+```bash
+mkdir spooly-data
+docker run -d --name spooly --restart unless-stopped --init \
+  --user "$(id -u):$(id -g)" -p 8000:8000 \
+  -v ~/Videos:/media -v "$PWD/spooly-data:/data" \
+  ghcr.io/oddloafhq/spooly:latest
+docker logs spooly    # access password
+```
+
+The image includes `ffmpeg`, `yt-dlp` and `gallery-dl` for amd64 and arm64.
+See [Docker](docs/docker.md) for Compose, NAS permissions and updates.
+
+### Android
+
+An Android phone can run Spooly in Termux. See
+[Android with Termux](docs/android-termux.md).
+
 ## What it does
 
 - **Flow** — a full-screen vertical feed that mixes videos and images. Swipe to
@@ -86,8 +105,8 @@ with a short note instead of stopping the feed.
 ## Configuration
 
 Settings come from command-line options, then environment variables
-(`MEDIA_ROOT`, `SPOOLY_HOST`, `SPOOLY_PORT`), then
-`~/.config/spooly/config.yaml`:
+(`MEDIA_ROOT`, `SPOOLY_HOST`, `SPOOLY_PORT`), then `config.yaml` in the
+`SPOOLY_INSTANCE` data directory when set, then `~/.config/spooly/config.yaml`:
 
 ```yaml
 media_sources:
@@ -239,6 +258,8 @@ The CLI owns the download manager. When hosting `create_app()` yourself, call
 ## Documentation
 
 - [Docs index](docs/README.md)
+- [Docker](docs/docker.md)
+- [Android with Termux](docs/android-termux.md)
 - [Flow interaction](docs/flow-interaction-unification.md)
 - [Media index and local recommendation](docs/media-index-and-recommendation.md)
 - [Release notes](docs/release_notes.md)

@@ -1,0 +1,17 @@
+# Spooly with Docker Compose: edit the media path, then run `docker compose up -d`.
+services:
+  spooly:
+    image: ghcr.io/oddloafhq/spooly:latest
+    container_name: spooly
+    restart: unless-stopped
+    init: true
+    # Run as the owner of your media folder (`id -u` and `id -g` on the host).
+    user: "1000:1000"
+    ports:
+      - "8000:8000"
+    environment:
+      TZ: Etc/UTC                      # your time zone, used by Timeline and On This Day
+      # SPOOLY_AUTH_PASSWORD: ""       # first start only; otherwise see `docker logs spooly`
+    volumes:
+      - ~/Videos:/media                # your library; writable for downloads and trash
+      - ./spooly-data:/data            # database, password, thumbnails and config.yaml

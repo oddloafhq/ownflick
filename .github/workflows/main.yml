@@ -95,3 +95,71 @@ jobs:
           path: dist/
       - name: Publish wheel & sdist
         uses: pypa/gh-action-pypi-publish@76f52bc884231f62b9a034ebfe128415bbaabdfc
+
+  docker:
+    name: Docker image smoke test
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build image
+        run: docker build -t spooly:ci .
+      - name: Start against a sample library
+        run: |
+          mkdir -p sample/media sample/data
+          cp spooly/static/brand/apple-touch-icon.png sample/media/
+          sudo chown -R 1000:1000 sample
+          docker run -d --name spooly -p 8000:8000 \
+            -e SPOOLY_AUTH_PASSWORD=ci-smoke-test-password \
+            -v "$PWD/sample/media:/media" -v "$PWD/sample/data:/data" spooly:ci
+          for _ in $(seq 1 60); do
+            [ "$(docker inspect -f '{{.State.Health.Status}}' spooly)" = healthy ] && break
+            sleep 2
+          done
+          docker inspect -f '{{.State.Health.Status}}' spooly | grep -qx healthy
+      - name: Check the server and bundled tools
+        run: |
+          test "$(curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:8000/login)" = 200
+          test "$(curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:8000/api/library/stats)" = 401
+          docker exec spooly sh -c 'ffmpeg -version && ffprobe -version && yt-dlp --version && gallery-dl --version && deno --version' > /dev/null
+          docker stop spooly
+          test "$(docker inspect -f '{{.State.ExitCode}}' spooly)" = 0
+      - name: Show container logs
+        if: failure()
+        run: docker logs spooly
+
+  publish-image:
+    name: Publish image to GHCR
+    if: github.event_name == 'release'
+    needs: [publish-pypi, docker]
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-qemu-action@v3
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ghcr.io/${{ github.repository }}
+          tags: |
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+      - name: Build and push linux/amd64 and linux/arm64
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max

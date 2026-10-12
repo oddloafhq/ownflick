@@ -1,5 +1,12 @@
 # Release notes
 
+## Unreleased
+
+- Docker image for `linux/amd64` and `linux/arm64` on GHCR, with `ffmpeg`, `yt-dlp`, `gallery-dl` and Deno, plus an example `compose.yaml`.
+- `config.yaml` in the `SPOOLY_INSTANCE` data directory is read first.
+- Guide for running Spooly on Android with Termux.
+- `pytest` is no longer installed with the package.
+
 ## v0.8.45 (2026-10-12) — Initial Spooly release
 
 - A private, self-hosted media library with a mixed video and photo Flow, timeline and Explore views, favorites, collections, and playback resume.
