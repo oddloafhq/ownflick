@@ -36,7 +36,7 @@ EXPOSE 8000
 
 # The first start indexes the whole library before it serves pages.
 HEALTHCHECK --interval=30s --timeout=5s --start-period=120s --retries=3 \
-    CMD ["python", "-c", "import os, urllib.request; urllib.request.urlopen('http://127.0.0.1:%s/login' % (os.environ.get('SPOOLY_PORT') or 8000), timeout=4)"]
+    CMD ["python", "-c", "import os, urllib.request; from spooly.run import load_config; port = int(os.environ.get('SPOOLY_PORT', 0)) or load_config().get('port') or 8000; urllib.request.urlopen('http://127.0.0.1:%s/login' % port, timeout=4)"]
 
 ENTRYPOINT ["spooly"]
 CMD ["serve", "/media"]
