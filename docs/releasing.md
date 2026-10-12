@@ -6,7 +6,7 @@ Repository: `oddloafhq/spooly`. Public contact: `hello@oddloaf.dev`.
 
 Run `poetry run pytest`, `npm ci`, `npm run build-css-prod`, `poetry check`, and `poetry build`. Keep Python and npm package versions aligned. Update the release notes and capture screenshots from an isolated demo instance when the UI changes.
 
-The first full application release is being prepared as 0.8.45. PyPI currently has a 0.0.1 name-reservation package; source installation is documented until the application is published.
+The first full application version is 0.8.45. Keep the package version and release tag aligned for each subsequent release.
 
 ## GitHub and PyPI setup
 
@@ -29,4 +29,4 @@ Dependencies are cached per Python version and lock file. New development commit
 
 Push the reviewed commits and a matching version tag when publication is authorized. Publish the GitHub Release with the tested tag and release notes. The workflow uploads the wheel and source distribution to PyPI using the configured publisher.
 
-After the release succeeds, change the README quick start to `pip install spooly` and `spooly ~/Videos`, replacing the source-install instructions and name-reservation note.
+After the release succeeds, verify that `pip install spooly` installs the new version and that the CLI and browser pages work from the installed package.

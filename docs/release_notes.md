@@ -1,6 +1,6 @@
 # Release notes
 
-## Unreleased — Initial Spooly release
+## v0.8.45 (2026-10-12) — Initial Spooly release
 
 - A private, self-hosted media library with a mixed video and photo Flow, timeline and Explore views, favorites, collections, and playback resume.
 - Home includes recent media, On This Day, and rediscovery of older media.
@@ -11,5 +11,3 @@
 - Independent Spooly branding and project links, maintained by [Oddloaf](https://oddloaf.dev).
 
 This repository contains the server and browser interface. Native applications and device-pairing APIs are outside this release.
-
-The package version remains 0.8.45 during preparation; this entry records the first Spooly release and does not imply it has been published.

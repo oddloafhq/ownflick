@@ -30,14 +30,11 @@ remote AI features require a connection.
 
 ## Quick start
 
-Run from source with Python 3.10+ and Poetry. The PyPI package currently
-reserves the name; the full application has not been released there yet.
+Requires Python 3.10+.
 
 ```bash
-git clone https://github.com/oddloafhq/spooly.git
-cd spooly
-poetry install
-poetry run spooly ~/Videos
+pip install spooly
+spooly ~/Videos
 ```
 
 Open `http://<your-computer>:8000` on any phone, tablet, or browser on the same
