@@ -15,6 +15,8 @@
   const emptyMessage = String(boot.emptyMessage || '');
   const timelineMonth = String(boot.timelineMonth || '');
   const focusName = new URLSearchParams(window.location.search).get('focus') || '';
+  let semanticSearch = false;
+  let searchRequest = 0;
   let searchQuery = new URLSearchParams(window.location.search).get('q') || '';
 
   const grid = document.getElementById('library-grid');
@@ -27,6 +29,7 @@
   const searchClearButton = document.getElementById('library-search-clear');
   const searchToggleButton = document.getElementById('library-search-toggle');
   const libraryToolbar = document.getElementById('library-toolbar');
+  const discoveries = document.getElementById('library-discoveries');
   const collectionIdentityCover = document.getElementById('collection-identity-cover');
 
   const quickView = document.getElementById('quick-view');
@@ -186,7 +189,7 @@
     if (searchQuery) params.set('q', searchQuery);
     else params.delete('q');
     const query = params.toString();
-    const nextUrl = `${window.location.pathname}${query ? `?${query}` : ''}`;
+    const nextUrl = `${window.location.pathname}${query ? `?${query}` : ''}${window.location.hash}`;
     const method = replace ? 'replaceState' : 'pushState';
     window.history[method]({ mode, seed }, '', nextUrl);
   }
@@ -413,7 +416,7 @@
   }
 
   async function loadNextPage() {
-    if (flowSession.isLoading() || !flowSession.hasMore()) return;
+    if (semanticSearch || flowSession.isLoading() || !flowSession.hasMore()) return;
     setLoadingText('Loading...');
     try {
       await flowSession.loadMore(async (cursor) => {
@@ -492,6 +495,16 @@
   }
 
   async function reloadCurrentMode() {
+    semanticSearch = false;
+    if (discoveries) {
+      discoveries.dataset.searching = 'false';
+      discoveries.hidden = !discoveries.querySelector('#library-discoveries-grid')?.childElementCount || !!searchQuery;
+    }
+    searchRequest += 1;
+    document.getElementById('image-search-reset')?.setAttribute('hidden', '');
+    document.getElementById('image-search-setup')?.setAttribute('hidden', '');
+    const imageSearchStatus = document.getElementById('image-search-status');
+    if (imageSearchStatus) imageSearchStatus.textContent = 'Each search calls the selected model.';
     closeViewer();
     flowSession.reset({
       hasMore: true,
@@ -1000,6 +1013,69 @@
     });
   }, { rootMargin: '1000px 0px' });
   observer.observe(sentinel);
+
+  const imageSearchForm = document.getElementById('image-search-form');
+  const imageSearchStatus = document.getElementById('image-search-status');
+  const imageSearchSetup = document.getElementById('image-search-setup');
+  imageSearchForm?.addEventListener('submit', async event => {
+    event.preventDefault();
+    if (flowSession.isLoading()) {
+      imageSearchStatus.textContent = 'Wait for the library to finish loading, then search.';
+      return;
+    }
+    const query = document.getElementById('image-search-query').value.trim();
+    const mediaType = document.getElementById('media-search-type')?.value || 'all';
+    if (!query) return;
+    const requestId = ++searchRequest;
+    const button = imageSearchForm.querySelector('[type="submit"]');
+    button.disabled = true;
+    button.textContent = 'Searching…';
+    imageSearchForm.setAttribute('aria-busy', 'true');
+    semanticSearch = true;
+    if (discoveries) {
+      discoveries.dataset.searching = 'true';
+      discoveries.hidden = true;
+    }
+    imageSearchSetup.hidden = true;
+    imageSearchStatus.textContent = 'Finding media… Your model may take a moment.';
+    try {
+      const response = await fetch('/api/library/media-search', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ query, media_type: mediaType }),
+      });
+      const payload = await response.json();
+      if (requestId !== searchRequest) return;
+      if (!payload.success) {
+        const error = new Error(payload.error || 'Search failed.');
+        error.status = response.status;
+        throw error;
+      }
+      closeViewer();
+      flowSession.reset({ hasMore: true });
+      await flowSession.loadMore(async () => ({ items: payload.data.items, hasMore: false }));
+      resetWaterfallLayout();
+      relayoutWaterfall();
+      feather.replace();
+      document.getElementById('image-search-reset').hidden = false;
+      const resultCount = payload.data.items.length;
+      imageSearchStatus.textContent = `${resultCount} results for “${query}”, ranked by similarity.`;
+      setLoadingText(resultCount ? 'End of search results' : 'No prepared media of this type yet.');
+    } catch (error) {
+      if (requestId === searchRequest) {
+        imageSearchStatus.textContent = error.message;
+        imageSearchSetup.hidden = error.status !== 409 && error.status !== 503;
+        semanticSearch = false;
+      }
+    } finally {
+      button.disabled = false;
+      button.textContent = 'Search';
+      imageSearchForm.removeAttribute('aria-busy');
+    }
+  });
+  document.getElementById('image-search-reset')?.addEventListener('click', () => {
+    document.getElementById('image-search-query').value = '';
+    reloadCurrentMode();
+  });
 
   if (scope === 'all') {
     document.querySelectorAll('.mode-tab').forEach((tab) => {

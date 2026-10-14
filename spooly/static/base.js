@@ -26,6 +26,9 @@ class ThemeManager {
   apply() {
     const resolved = this.resolvedTheme();
     document.body.setAttribute('data-theme', resolved);
+    document.querySelectorAll('[data-theme-sync]').forEach((element) => {
+      element.setAttribute('data-theme', resolved);
+    });
     window.dispatchEvent(new CustomEvent('spooly:theme-changed', {
       detail: { preference: this.preference, resolved }
     }));

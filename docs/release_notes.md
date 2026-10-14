@@ -1,5 +1,15 @@
 # Release notes
 
+## v0.8.47 (2026-10-14) — optional media discovery
+
+- Prepare photos and videos from Settings → Similar Images, with progress and pause. Videos use their library thumbnail and need `ffmpeg`.
+- Up to 24 varied photo groups are chosen locally after preparation; Library → Explore previews them and Flow can reuse an existing gallery slot.
+- Search prepared photos and videos by description in Library → Explore.
+- The embedding connection is read only from `config.yaml` (`base_url`, `model_name`, optional `api_key`). Dimensions, image size, quality and timeout are fixed; the saved `embedding_config.json`, its Web form and the `analyze-similar` command were removed.
+- Vectors are kept per file and model. Existing 768-dimension image vectors are migrated without re-encoding; saved groups are rebuilt by the next preparation.
+- Optional Docker guide for EmbeddingGemma 2 on Linux x86_64 CPUs without AVX. The model service is separate from Spooly and is not started automatically.
+- The legacy media-folder `favorite.json` is no longer imported on every startup.
+
 ## v0.8.46 (2026-10-12) — Docker and distribution
 
 - Docker image for `linux/amd64` and `linux/arm64` on GHCR, with `ffmpeg`, `yt-dlp`, `gallery-dl` and Deno, plus an example `compose.yaml`.

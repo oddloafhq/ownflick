@@ -1,0 +1,46 @@
+services:
+  embedding:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: spooly-embedding:llama-sse42
+    ports:
+      - "127.0.0.1:9379:9379"
+    volumes:
+      - llama-models:/models:ro
+    command:
+      - --model
+      - /models/model.gguf
+      - --mmproj
+      - /models/mmproj.gguf
+      - --alias
+      - embeddinggemma-2
+      - --embeddings
+      - --host
+      - 0.0.0.0
+      - --port
+      - "9379"
+      - --ctx-size
+      - "2048"
+      - --batch-size
+      - "512"
+      - --ubatch-size
+      - "512"
+      - --threads
+      - "2"
+      - --parallel
+      - "1"
+      - --n-gpu-layers
+      - "0"
+      - --no-mmproj-offload
+    init: true
+    restart: "no"
+    mem_limit: 2g
+    cpus: 2
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+
+volumes:
+  llama-models:

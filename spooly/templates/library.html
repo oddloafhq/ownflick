@@ -109,6 +109,41 @@
   </section>
   {% endif %}
 
+  {% if scope == 'all' and library_view == 'explore' and similarity_enabled %}
+  <section id="library-discoveries" class="mx-auto max-w-6xl px-2 py-5" aria-label="Related photos" hidden>
+    <div class="mb-3 flex items-baseline justify-between gap-3">
+      <h2 class="text-lg font-semibold">Related photos</h2>
+      <a href="{{ url_for('similarity_view') }}" class="text-sm underline">View all</a>
+    </div>
+    <div id="library-discoveries-grid" class="grid max-w-[880px] grid-cols-2 gap-2 md:grid-cols-4"></div>
+  </section>
+  <details id="semantic-search-panel" class="embedding-settings mx-auto max-w-6xl px-2 py-3" data-theme-sync>
+    <summary class="cursor-pointer text-sm underline">Search by description</summary>
+    <div class="max-w-[760px] pt-3">
+    {% if media_search_available %}
+      <form id="image-search-form" class="flex flex-wrap sm:flex-nowrap gap-2 items-center">
+        <label for="image-search-query" class="sr-only">Describe media</label>
+        <input id="image-search-query" class="dui-input w-full sm:flex-1 min-w-0" type="search" maxlength="200" required placeholder="Describe what you want to find">
+        <label for="media-search-type" class="sr-only">Media type</label>
+        <select id="media-search-type" class="dui-select dui-select-sm" aria-label="Media type">
+          <option value="all">All media</option>
+          <option value="image">Photos</option>
+          <option value="video">Videos</option>
+        </select>
+        <button class="dui-btn" type="submit">Search</button>
+      </form>
+      <div class="flex flex-wrap items-baseline gap-x-3 gap-y-1 mt-2 text-sm">
+        <p id="image-search-status" class="opacity-70" role="status" aria-live="polite">Each search calls the selected model.</p>
+        <button id="image-search-reset" class="dui-btn dui-btn-ghost dui-btn-sm px-0" type="button" hidden>Show library</button>
+        <a id="image-search-setup" class="underline" href="{{ url_for('similarity_view') }}" hidden>Similar Images</a>
+      </div>
+    {% else %}
+      <p class="text-sm opacity-70"><a class="underline" href="{{ url_for('similarity_view') }}">Prepare media</a> to search by description.</p>
+    {% endif %}
+    </div>
+  </details>
+  {% endif %}
+
   {% if not (scope == 'all' and library_view == 'timeline') %}
   <section id="library-grid" class="masonry-grid{% if scope in ['favorite', 'collection'] %} saved-content{% endif %}"></section>
   {% endif %}
@@ -245,5 +280,8 @@
 <script src="{{ static_asset('library_timeline_controller.js') }}"></script>
 {% else %}
 <script src="{{ static_asset('library_page_controller.js') }}"></script>
+{% endif %}
+{% if scope == 'all' and library_view == 'explore' and similarity_enabled %}
+<script src="{{ static_asset('experiments/library-discoveries.js') }}"></script>
 {% endif %}
 {% endblock %}

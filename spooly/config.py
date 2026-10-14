@@ -26,8 +26,6 @@ def normalize_media_sources(config, cli_sources=None, media_root=None):
 
 def similarity_enabled(experiments=None, embedding=None) -> bool:
     """Resolve the startup switch without importing vector runtime code."""
-    from spooly.paths import get_embedding_config_path
-
     if experiments is not None and not isinstance(experiments, dict):
         raise ValueError('experiments must be a configuration object')
     similarity = (experiments or {}).get('similarity', {})
@@ -37,12 +35,5 @@ def similarity_enabled(experiments=None, embedding=None) -> bool:
         if not isinstance(similarity['enabled'], bool):
             raise ValueError('experiments.similarity.enabled must be a boolean')
         return similarity['enabled']
-
-    path = get_embedding_config_path()
-    if not embedding and not path.exists():
-        return False
-    from spooly.experiments.similarity.config import EmbeddingConfigStore, validate_embedding_config
-
-    custom = EmbeddingConfigStore(path).get()
-    configured, error = validate_embedding_config(embedding or {}, partial=True)
-    return bool((custom or (configured if not error else {}) or {}).get('enabled', False))
+    # Older configurations enabled the feature with embedding.enabled.
+    return isinstance(embedding, dict) and embedding.get('enabled') is True

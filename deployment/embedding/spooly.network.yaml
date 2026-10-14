@@ -1,0 +1,8 @@
+services:
+  spooly:
+    networks:
+      - spooly-ai
+
+networks:
+  spooly-ai:
+    external: true

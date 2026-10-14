@@ -12,10 +12,6 @@ from spooly.paths import get_auth_path
 from spooly.services.auth import AuthStore
 from spooly.services.library import normalize_source_id
 from spooly.config import normalize_media_sources, similarity_enabled
-from spooly.experiments.similarity import (
-    DEFAULT_SIMILARITY_MAX_GROUP_SIZE, DEFAULT_SIMILARITY_MIN_GROUP_SIZE,
-    DEFAULT_SIMILARITY_SCAN_LIMIT, DEFAULT_SIMILARITY_THRESHOLD,
-)
 
 try:
     import yaml
@@ -80,7 +76,7 @@ def main():
             if idx != 0:
                 argv.pop(idx)
                 argv.insert(0, 'thumbs')
-        elif len(argv) == 0 or argv[0] not in ('serve', 'thumbs', 'dedupe', 'vectorize', 'analyze-similar', 'auth'):
+        elif len(argv) == 0 or argv[0] not in ('serve', 'thumbs', 'dedupe', 'vectorize', 'auth'):
             # Default to serve when no known subcommand is present.
             argv.insert(0, 'serve')
 
@@ -97,8 +93,7 @@ Examples:
   spooly thumbs /path --overwrite        # Generate thumbnails in bulk
   spooly dedupe /path --dry-run          # Preview duplicate files
   spooly dedupe /path --execute          # Delete duplicates and keep the oldest
-  spooly vectorize /path --limit 200     # Vectorize the 200 newest images
-  spooly analyze-similar /path --yes     # Precompute similar-image groups
+  spooly vectorize /path --limit 200     # Prepare 200 photos/videos for similarity
   spooly auth set-password               # Set a new access password
         '''
     )
@@ -142,41 +137,13 @@ Examples:
                               help='Skip the deletion confirmation prompt')
 
     # vectorize command
-    vectorize_parser = subparsers.add_parser('vectorize', help='Build the image vector index in bulk')
+    vectorize_parser = subparsers.add_parser('vectorize', help='Prepare photo and video vectors for similarity and search')
     vectorize_parser.add_argument('media_root', nargs='?', help='Media root (optional when configured elsewhere)')
     vectorize_parser.add_argument('--media-source', action='append', type=parse_cli_media_source,
                                   help='Add a repeatable media source as id=/path/to/media')
-    vectorize_parser.add_argument('--source', default=None, help='Process only this media source ID')
-    vectorize_parser.add_argument('--limit', type=int, default=0, help='Maximum images to process (0 means all)')
-    vectorize_parser.add_argument('--order', choices=['latest', 'oldest', 'path'], default='latest',
-                                  help='Processing order (default: latest)')
+    vectorize_parser.add_argument('--limit', type=int, default=0, help='Maximum files to send (0 means all)')
     vectorize_parser.add_argument('--dry-run', action='store_true', help='Show the plan without calling the model')
-    vectorize_parser.add_argument('--force', action='store_true', help='Rebuild existing vectors')
-    vectorize_parser.add_argument('--cleanup', action='store_true', help='Remove vectors for missing local files')
-    vectorize_parser.add_argument('--continue-after-cleanup', action='store_true', help='Continue vectorizing after cleanup')
-    vectorize_parser.add_argument('--max-size', type=int, default=None, help='Override embedding.image_max_size')
-    vectorize_parser.add_argument('--quality', type=int, default=None, help='Override embedding.image_quality')
-    vectorize_parser.add_argument('--dimensions', type=int, default=None, help='Override embedding.dimensions')
     vectorize_parser.add_argument('--yes', action='store_true', help='Skip the confirmation prompt')
-
-    # analyze-similar command
-    analyze_parser = subparsers.add_parser('analyze-similar', help='Precompute similar-image groups from existing vectors')
-    analyze_parser.add_argument('media_root', nargs='?', help='Media root (optional when configured elsewhere)')
-    analyze_parser.add_argument('--media-source', action='append', type=parse_cli_media_source,
-                                help='Add a repeatable media source as id=/path/to/media')
-    analyze_parser.add_argument('--limit', type=int, default=DEFAULT_SIMILARITY_SCAN_LIMIT,
-                                help=f'Number of recent vectorized images to analyze (default: {DEFAULT_SIMILARITY_SCAN_LIMIT})')
-    analyze_parser.add_argument('--threshold', type=float, default=DEFAULT_SIMILARITY_THRESHOLD,
-                                help=f'Similarity threshold (default: {DEFAULT_SIMILARITY_THRESHOLD})')
-    analyze_parser.add_argument('--min-group-size', type=int, default=DEFAULT_SIMILARITY_MIN_GROUP_SIZE,
-                                help=f'Minimum group size (default: {DEFAULT_SIMILARITY_MIN_GROUP_SIZE})')
-    analyze_parser.add_argument('--max-group-size', type=int, default=DEFAULT_SIMILARITY_MAX_GROUP_SIZE,
-                                help=f'Maximum images per group (default: {DEFAULT_SIMILARITY_MAX_GROUP_SIZE})')
-    analyze_parser.add_argument('--profile', action='store_true', help='Show group summaries at several thresholds')
-    analyze_parser.add_argument('--dry-run', action='store_true', help='Show results without writing to the database')
-    analyze_parser.add_argument('--clear', action='store_true', help='Remove existing similar-image groups')
-    analyze_parser.add_argument('--continue-after-clear', action='store_true', help='Analyze again after clearing')
-    analyze_parser.add_argument('--yes', action='store_true', help='Skip the confirmation prompt')
 
     args = parser.parse_args(argv)
 
@@ -221,22 +188,15 @@ Examples:
         )
         return
 
-    if cmd in {'vectorize', 'analyze-similar'}:
+    if cmd == 'vectorize':
         try:
             enabled = similarity_enabled(config.get('experiments'), config.get('embedding') or config.get('embedding_config'))
         except ValueError as exc:
             parser.error(str(exc))
         if not enabled:
             parser.error('The similar-image experiment is disabled; set experiments.similarity.enabled: true')
-
-    if cmd == 'vectorize':
         from spooly.experiments.similarity.cli import run_vectorize
         run_vectorize(config, args, parser)
-        return
-
-    if cmd == 'analyze-similar':
-        from spooly.experiments.similarity.cli import run_analyze_similar
-        run_analyze_similar(config, args, parser)
         return
 
     if cmd == 'auth':

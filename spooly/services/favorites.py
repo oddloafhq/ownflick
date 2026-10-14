@@ -6,28 +6,20 @@ from spooly.services.library import LibraryService, normalize_media_uri
 
 from spooly.services.json_storage import write_json_atomic
 
-FAVORITE_FILENAME = 'favorite.json'
-
 
 class FavoriteService:
     def __init__(
         self,
-        media_root: str | Path | None = None,
-        *,
-        db_path: Path | None = None,
-        library_service: LibraryService | None = None,
+        db_path: Path,
+        library_service: LibraryService,
     ):
-        self.db_path = db_path or (Path(media_root) / FAVORITE_FILENAME)
+        self.db_path = db_path
         self.library_service = library_service
-        self.legacy_db_path = Path(media_root) / FAVORITE_FILENAME if media_root else None
         self._lock = RLock()
         self.db_path.parent.mkdir(parents=True, exist_ok=True)
-        self._import_legacy_if_needed()
 
     def _normalize(self, filename: str) -> str:
-        if self.library_service:
-            return self.library_service.canonicalize_uri(filename)
-        return normalize_media_uri(filename)
+        return self.library_service.canonicalize_uri(filename)
 
     def _read_raw(self, path: Path) -> set[str]:
         try:
@@ -38,24 +30,8 @@ class FavoriteService:
             raise ValueError('Invalid favorites file format')
         return {normalize_media_uri(item) for item in data}
 
-    def _import_legacy_if_needed(self) -> None:
-        if not self.library_service or not self.legacy_db_path or not self.legacy_db_path.exists():
-            return
-        existing = self._read_raw(self.db_path)
-        legacy = self._read_raw(self.legacy_db_path)
-        merged = set(existing)
-        for item in legacy:
-            canonical = self.library_service.canonicalize_uri(item)
-            if canonical:
-                merged.add(canonical)
-        if merged != existing:
-            self.save(merged)
-
     def load(self) -> set[str]:
-        values = self._read_raw(self.db_path)
-        if self.library_service:
-            return self.library_service.canonicalize_many(values)
-        return values
+        return self.library_service.canonicalize_many(self._read_raw(self.db_path))
 
     def save(self, favorites: set[str]) -> None:
         with self._lock:

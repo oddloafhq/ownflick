@@ -163,7 +163,7 @@ def create_app(test_config=None):
     default_media_root = library_service.media_root
     media_root_str = str(default_media_root)
     app.config['MEDIA_ROOT'] = default_media_root
-    favorite_service = FavoriteService(media_root_str, db_path=get_favorites_path(), library_service=library_service)
+    favorite_service = FavoriteService(get_favorites_path(), library_service)
     thumbnail_service = ThumbnailService(Path(media_root_str), library_service=library_service)
     metadata_store = ImageMetadataStore(get_metadata_path())
     caption_settings = CaptionSettings(app.config.get('VISION_CONFIG'), get_prompt_config_path(), get_llm_config_path())
@@ -199,9 +199,10 @@ def create_app(test_config=None):
         radio_profile_store,
         activity_store=activity_store,
     )
+    similarity = None
     if similarity_active:
         from spooly.experiments.similarity.web import register_similarity_routes
-        register_similarity_routes(app, library_service, app_database)
+        similarity = register_similarity_routes(app, library_service, thumbnail_service, app_database)
     download_config_store = DownloadConfigStore(get_download_config_path())
     download_history_store = DownloadHistoryStore(get_download_jobs_path())
     download_source_store = DownloadSourceStore(get_download_sources_path())
@@ -223,13 +224,14 @@ def create_app(test_config=None):
         app, library_service=library_service, media_index=media_index,
         library_indexer=library_indexer, favorite_service=favorite_service,
         collection_store=collection_store, activity_store=activity_store,
-        similarity_active=similarity_active,
+        media_search_available=similarity.has_vectors if similarity else None,
     )
 
     register_flow_routes(
         app, media_index=media_index, recommend_service=recommend_service,
         download_source_store=download_source_store,
         activity_store=activity_store,
+        related_photo_groups=similarity.photo_groups if similarity else None,
     )
 
     register_radio_routes(app, library_service, radio_service, thumbnail_service, RadioEnergyService(library_service))

@@ -141,6 +141,7 @@ def build_mix_feed_page(
     media_index,
     download_source_store,
     activity_store=None,
+    related_photo_groups=None,
     mode: str = '',
 ) -> dict:
     video_ratio = 4
@@ -282,6 +283,23 @@ def build_mix_feed_page(
         insert_at = insert_floor if insert_ceil <= insert_floor else memory_rng.randint(insert_floor, insert_ceil)
         mixed_entries.insert(insert_at, memory)
 
+    # Reuse the gallery slot on even pages; keep existing source and memory cards first.
+    if (not forgotten and page % 2 == 0 and mixed_entries and
+            not image_group_candidate and not memory and related_photo_groups):
+        available = related_photo_groups(limit=8).get('items') or []
+        if available:
+            group = available[(page // 2 - 1) % len(available)]
+            children = [build_feed_media_item(item['uri'], 'image') for item in group['items'][:8]]
+            child_names = {str(item.get('name') or '') for item in children}
+            mixed_entries = [entry for entry in mixed_entries
+                             if entry.get('type') != 'image' or entry.get('name') not in child_names]
+            insert_at = min(6, len(mixed_entries))
+            mixed_entries.insert(insert_at, {
+                'type': 'image_group', 'name': f"related:{group['group_key']}",
+                'title': 'Related Photos', 'subtitle': 'More from your library.',
+                'items': children,
+            })
+
     recommendation_reasons = recommend_service.reasons_for([
         str(entry.get('name') or '')
         for entry in mixed_entries
@@ -311,7 +329,7 @@ def build_mix_feed_page(
 
 def register_flow_routes(
     app, *, media_index, recommend_service,
-    download_source_store, activity_store,
+    download_source_store, activity_store, related_photo_groups=None,
 ):
     @app.route('/flow')
     def flow_view():
@@ -327,6 +345,7 @@ def register_flow_routes(
             media_index=media_index,
             download_source_store=download_source_store,
             activity_store=activity_store,
+            related_photo_groups=related_photo_groups,
             mode=request.args.get('mode', ''),
         )
         if request.args.get('snapshot') == '1':

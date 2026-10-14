@@ -80,7 +80,7 @@ jobs:
   publish-pypi:
     name: Publish to PyPI
     if: github.event_name == 'release'
-    needs: [check, compatibility]
+    needs: [check, compatibility, docker]
     runs-on: ubuntu-latest
     timeout-minutes: 5
     environment:
@@ -153,6 +153,7 @@ jobs:
           tags: |
             type=semver,pattern={{version}}
             type=semver,pattern={{major}}.{{minor}}
+            type=raw,value=latest
       - name: Build and push linux/amd64 and linux/arm64
         uses: docker/build-push-action@v6
         with:

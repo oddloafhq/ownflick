@@ -4,7 +4,7 @@ import datetime
 import random
 from urllib.parse import quote
 
-from flask import redirect, render_template, request, url_for
+from flask import render_template, request
 
 from spooly.services.collections import normalize_collection_mutation_uris
 from spooly.services.library import IMAGE_EXTENSIONS
@@ -14,7 +14,7 @@ from spooly.web import read_int_arg
 
 def register_library_routes(
     app, *, library_service, media_index, library_indexer, favorite_service,
-    collection_store, activity_store, similarity_active: bool,
+    collection_store, activity_store, media_search_available=None,
 ):
     def _read_page_options(scope: str = 'all') -> dict:
         mode = str(request.args.get('mode', 'all')).strip()
@@ -180,10 +180,6 @@ def register_library_routes(
 
     @app.route('/library')
     def library_view():
-        if request.args.get('mode') == 'similar_images':
-            if similarity_active:
-                return redirect(url_for('similarity_view'))
-            return render_template('experiments/disabled.html', menu='library'), 404
         requested_view = str(request.args.get('view', '')).strip()
         if requested_view not in {'timeline', 'explore', 'month'}:
             requested_view = 'explore' if any(request.args.get(key) for key in ('mode', 'q', 'focus')) else 'timeline'
@@ -208,6 +204,7 @@ def register_library_routes(
             initial_page, mode=options['mode'], min_mb=options['min_mb'],
             library_view=requested_view, timeline_month=options['month'],
             timeline_payload=timeline_payload,
+            media_search_available=bool(media_search_available and media_search_available()),
         )
 
     @app.route('/favorite')

@@ -22,7 +22,7 @@ The workflow runs these jobs:
 - Pushes to `main` and pull requests run one Python 3.12 job that tests and builds the package.
 - A published GitHub Release runs that job plus a Python 3.10 compatibility test in parallel, then publishes only if both succeed.
 - Version-tag pushes do not trigger a separate run. Python 3.14 is not part of the fixed test matrix.
-- Every run also builds the Docker image and smoke-tests it against a sample library. After PyPI publication, a release pushes the `linux/amd64` and `linux/arm64` image to `ghcr.io/oddloafhq/spooly` with the version, minor and `latest` tags.
+- Every run also builds the Docker image and smoke-tests it against a sample library. A release publishes to PyPI only after the Python checks and Docker smoke test pass, then pushes the `linux/amd64` and `linux/arm64` image to `ghcr.io/oddloafhq/spooly` with the version, minor and `latest` tags.
 
 Dependencies are cached per Python version and lock file. New development commits cancel outdated checks; release runs are not cancelled by newer development checks. Package artifacts are uploaded only for releases. Avoid embedding registry tokens in repository files.
 

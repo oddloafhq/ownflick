@@ -2,7 +2,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   const section = document.getElementById('similar-images-section');
   if (!section) return;
   try {
-    const response = await fetch(`/api/recommend/similar?uri=${encodeURIComponent(section.dataset.uri)}&limit=12`);
+    const response = await fetch(`/api/recommend/similar?uri=${encodeURIComponent(section.dataset.uri)}&limit=6`);
     const result = await response.json();
     if (!response.ok || !result.success || !result.data?.indexed) return;
     const grid = document.getElementById('similar-images-grid');

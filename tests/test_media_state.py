@@ -5,6 +5,8 @@ import pytest
 from PIL import Image
 
 from spooly.app import create_app
+from spooly.services.favorites import FavoriteService
+from spooly.services.library import LibraryService
 from spooly.services.metadata import ImageMetadataStore
 
 
@@ -20,6 +22,21 @@ def test_concurrent_favorites_keep_every_update(tmp_path):
         assert all(pool.map(favorite, names))
     client = app.test_client()
     assert all(client.get(f'/api/favorite/{name}').get_json()['favorite'] for name in names)
+
+
+def test_old_media_favorites_do_not_restore_removed_items(tmp_path):
+    media = tmp_path / 'media'
+    media.mkdir()
+    (media / 'favorite.json').write_text('["photo.jpg"]')
+    path = tmp_path / 'data' / 'favorites.json'
+    library = LibraryService(media)
+
+    favorites = FavoriteService(path, library)
+    assert favorites.load() == set()
+    favorites.set_favorite('photo.jpg', True)
+    favorites.set_favorite('photo.jpg', False)
+
+    assert FavoriteService(path, library).load() == set()
 
 
 @pytest.mark.parametrize('failure', ['replace', 'corrupt'])

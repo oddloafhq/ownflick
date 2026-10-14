@@ -6,37 +6,16 @@
 <main class="max-w-6xl mx-auto px-4 py-8 pb-28 space-y-7">
   <header class="space-y-2">
     <a href="{{ url_for('library_view') }}" class="text-sm underline">Return to Library</a>
-    <h1 class="text-2xl font-semibold">Similar Images <span class="text-sm font-normal opacity-60">Experiment</span></h1>
-    <p class="text-sm opacity-70">Browse generated similarity groups. Viewing results does not call the model.</p>
+    <div class="flex flex-wrap items-end justify-between gap-3">
+      <div>
+        <h1 class="text-2xl font-semibold">Similar Images</h1>
+        <p class="text-sm opacity-70 mt-1">Related photos from your library. Browsing saved results does not call the model.</p>
+      </div>
+      {% if status.prepared %}<a class="text-sm underline" href="{{ url_for('library_view', view='explore') }}#semantic-search-panel">Search by description</a>{% endif %}
+    </div>
   </header>
 
-  <section aria-label="Vector status" class="space-y-3">
-    <dl class="grid grid-cols-2 sm:grid-cols-4 gap-4">
-      {% for label, value in [('Total Images', status.total_images), ('Available', status.indexed), ('Not Built', status.missing), ('Needs Update', status.stale)] %}
-      <div><dt class="text-sm opacity-60">{{ label }}</dt><dd class="text-2xl font-semibold">{{ value }}</dd></div>
-      {% endfor %}
-    </dl>
-    {% if status.stale_reasons %}
-    <p class="text-sm">Update reasons (may overlap):
-      {% set labels = {'model': 'Model changed', 'dimensions': 'Vector dimensions changed', 'image_max_size': 'Image size setting changed', 'image_quality': 'Image quality setting changed', 'file_changed': 'File changed'} %}
-      {% for reason, count in status.stale_reasons.items() %}{{ labels[reason] }} {{ count }}{% if not loop.last %} · {% endif %}{% endfor %}
-    </p>
-    {% endif %}
-    <p class="text-sm break-words opacity-70">{{ config.model_name }} · {{ config.dimensions }} dimensions · longest edge {{ config.image_max_size }}px · JPEG quality {{ config.image_quality }}</p>
-    <p class="text-sm">{{ status.pending }} images pending. Estimated cost depends on the model provider and processed volume.</p>
-    {% if not config.enabled %}<p class="text-sm">Results are view-only because vector building is disabled.</p>{% endif %}
-    <details class="text-sm space-y-2">
-      <summary class="cursor-pointer underline">Build and update instructions</summary>
-      <p>Use the configured media directory in the server terminal. Preview the scope first, then run it; the model is not called without confirmation.</p>
-      <pre class="overflow-x-auto p-3 rounded-lg bg-gray-100 dark:bg-gray-800">spooly vectorize --dry-run --limit 100
-spooly vectorize --limit 100
-spooly analyze-similar</pre>
-      <p>Building requires embedding.enabled: true and an API key. Web batch building is disabled to avoid occupying the browsing service.</p>
-    </details>
-  </section>
-
   <section aria-label="Similarity groups" class="space-y-3">
-    <h2 class="text-lg font-semibold">Similarity Groups</h2>
     <div class="similar-groups-grid">
       {% for group in page['items'] %}
       {% set visible = group['items'][:6] %}
@@ -53,11 +32,34 @@ spooly analyze-similar</pre>
       </article>
       {% endfor %}
     </div>
-    {% if not page['items'] %}<p class="py-8 opacity-70">There are no groups to display on this page. Build vectors, then run local similarity analysis.</p>{% endif %}
+    {% if not page['items'] %}<p class="py-8 opacity-70">Related photo groups appear here after preparation finishes.</p>{% endif %}
     <nav aria-label="Group pagination" class="flex gap-6 text-sm">
       {% if page.offset > 0 %}<a class="underline" href="{{ url_for('similarity_view', offset=[0, page.offset-page.limit]|max) }}">Previous</a>{% endif %}
       {% if page.has_more %}<a class="underline" href="{{ url_for('similarity_view', offset=page.next_offset) }}">Next</a>{% endif %}
     </nav>
   </section>
+
+  <section aria-label="Preparation" class="embedding-settings space-y-3 border-t border-base-300 pt-5" data-theme-sync>
+    <h2 class="text-lg font-semibold">Prepare media</h2>
+    <p class="text-sm">{{ status.prepared }} of {{ status.total }} files prepared
+      ({{ status.images }} photos{% if status.videos_supported %}, {{ status.videos }} videos{% endif %}).
+      {% if not status.videos_supported %}<span class="opacity-70">Install ffmpeg to include videos.</span>{% endif %}</p>
+    <div class="flex flex-wrap items-center gap-3">
+      <button id="media-index-start" class="dui-btn dui-btn-sm" type="button" {% if not status.total %}disabled{% endif %}>{{ 'Prepare ' ~ status.pending ~ ' files' if status.pending else 'Refresh photo groups' }}</button>
+      <button id="media-index-pause" class="dui-btn dui-btn-sm dui-btn-ghost" type="button" hidden>Pause</button>
+      <span id="media-index-progress" class="text-sm opacity-70" role="status" aria-live="polite">{% if job.state == 'failed' %}{{ job.error }}{% endif %}</span>
+    </div>
+    <p class="text-sm opacity-70">Preparing sends each pending photo, or a video's thumbnail, to the service below as a small JPEG without location or other metadata.</p>
+    <dl class="text-sm grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 break-words">
+      <dt class="opacity-60">Service</dt><dd>{{ connection.base_url }}</dd>
+      <dt class="opacity-60">Model</dt><dd>{{ connection.model }}</dd>
+      <dt class="opacity-60">API key</dt><dd>{{ {'config': 'From config.yaml', 'environment': 'From the server environment', 'none': 'None'}[connection.key_source] }}</dd>
+    </dl>
+    <p class="text-sm opacity-70">Change the <code>embedding</code> section of <code>config.yaml</code> and restart Spooly to use another service. A new model prepares its own vectors; files it has not reached yet are left out of search. For a local model, see the <a class="underline" href="https://github.com/oddloafhq/spooly/blob/main/deployment/embedding/README.md" target="_blank" rel="noopener">Docker guide</a>.</p>
+  </section>
 </main>
+{% endblock %}
+
+{% block extra_body %}
+<script src="{{ static_asset('experiments/similarity.js') }}" defer></script>
 {% endblock %}

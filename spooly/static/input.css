@@ -1,4 +1,11 @@
 @import "tailwindcss";
+@plugin "daisyui" {
+  prefix: dui-;
+  root: ".embedding-settings";
+  themes: light --default, dark;
+  include: button, input, select;
+  logs: false;
+}
 @custom-variant dark (&:where([data-theme=dark], [data-theme=dark] *));
 
 

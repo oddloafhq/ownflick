@@ -12,7 +12,9 @@ def media_urls(uri: str) -> dict[str, str]:
 
 def build_feed_media_item(name: str, media_type: str) -> dict[str, str]:
     encoded = quote(name)
-    detail_url = f"/detail/{encoded}" if media_type == 'video' else f"/image?uri={encoded}"
+    detail_url = (f"/detail/{encoded}" if media_type == 'video' else
+                  f"/media/{quote(name, safe='/')}" if media_type == 'audio' else
+                  f"/image?uri={encoded}")
     return {
         'type': media_type,
         'name': name,

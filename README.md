@@ -202,10 +202,10 @@ Options: `--type video|image|all`, `--algorithm sha256|md5`,
 </details>
 
 <details>
-<summary><strong>AI titles and similar images (optional)</strong></summary>
+<summary><strong>AI titles, media search and similar images (optional)</strong></summary>
 
-Image titles and tags use a vision model; similar images use an embedding model.
-Both are off unless configured:
+Image titles and tags use a vision model; similar images and description search
+use an embedding model. Both are off unless configured:
 
 ```yaml
 vision:
@@ -219,33 +219,55 @@ experiments:
     enabled: true
 
 embedding:
-  enabled: true
   base_url: https://openrouter.ai/api/v1
   model_name: google/gemini-embedding-2
-  dimensions: 768
-  image_max_size: 512
-  image_quality: 82
+  # api_key: ...             # optional; otherwise read from the environment
 ```
 
-API keys come from `SPOOLY_VISION_API_KEY`, `SPOOLY_EMBEDDING_API_KEY`, then
-`SPOOLY_AI_API_KEY`, `OPENAI_API_KEY` or `OPENROUTER_API_KEY`.
+Vision keys come from `SPOOLY_VISION_API_KEY`, then the shared key variables.
+The embedding key comes from `embedding.api_key`, then `SPOOLY_EMBEDDING_API_KEY`,
+`SPOOLY_AI_API_KEY`, `OPENAI_API_KEY` or `OPENROUTER_API_KEY`. The connection is
+read only from `config.yaml`; restart Spooly after changing it. Settings shows
+it read-only and never displays the key. Spooly always requests 768-dimension
+vectors and sends photos as 512px JPEGs without location or other metadata.
 
-Vectors are built from the command line and stored in
-`~/.spooly/spooly.sqlite3`; viewing results never calls a model.
+Open **Settings → Similar Images** and choose **Prepare**. The job runs in the
+background, can be paused, and handles photos first, then videos when `ffmpeg` is
+installed (each video is represented by its library thumbnail). Three
+consecutive service failures stop the job; an unreadable file is skipped and
+retried next time. Progress lives in the serving process, so after a restart
+start preparation again; prepared files are skipped. Vectors are stored in
+`~/.spooly/spooly.sqlite3` (or `/data` in Docker), and viewing saved results
+never calls a model.
+
+After preparation, Spooly selects up to 24 varied photo groups locally from the
+5,000 most recent prepared photos, compared in windows of 64. Library → Explore
+shows a few groups, Flow may reuse an existing gallery slot for one, and photo
+details list related photos from all prepared photos. **Search by description**
+in Library → Explore sends one text request per search (Chinese works too) and
+ranks up to 48 photos and videos by similarity, which is not a confidence score.
+Queries are not saved.
+
+The same preparation is available from the terminal:
 
 ```bash
-spooly vectorize ~/Videos --dry-run                  # see what would be sent
-spooly vectorize ~/Videos --limit 200 --order latest
-spooly vectorize ~/Videos --source photos --cleanup
-spooly analyze-similar ~/Videos --limit 500 --yes
+spooly vectorize ~/Videos --dry-run            # counts only; nothing is sent
+spooly vectorize ~/Videos --limit 200          # try a small batch first
+spooly vectorize ~/Videos --yes
 ```
 
-Only missing or stale images are uploaded, resized and re-encoded without their
-original metadata. Results appear at `/experiments/similarity`, opened from
-Settings. `experiments.similarity.enabled: false` turns the feature off without
-deleting data; restart after changing it. When omitted, a valid legacy
-`embedding.enabled: true` enables it. Precedence is defaults < YAML < saved
-embedding configuration < CLI options.
+Changing `model_name` starts a new vector space: files are prepared again for
+the new model, and search and related photos include them as they are reached.
+Files changed on disk are prepared again on the next run.
+
+At the 2026-10-13 OpenRouter price, about 5,000 Gemini image vectors cost $0.58,
+excluding retries and fees. To run a model on your own NAS instead, see the
+[isolated Docker deployment guide](deployment/embedding/README.md); Spooly does
+not install or start the model service.
+
+`experiments.similarity.enabled: false` turns the feature off without deleting
+data; restart after changing it. When omitted, a legacy `embedding.enabled: true`
+enables it. An invalid embedding URL stops startup with a configuration error.
 
 </details>
 
