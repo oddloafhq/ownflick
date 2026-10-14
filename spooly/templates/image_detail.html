@@ -2,7 +2,6 @@
 
 {% block extra_head %}
 <link rel="stylesheet" type="text/css" href="{{ static_asset('media_detail.css') }}">
-{% if similarity_enabled %}<link rel="stylesheet" href="{{ static_asset('experiments/image-similarity.css') }}">{% endif %}
 <link rel="stylesheet" href="{{ static_asset('image_detail.css') }}">
 {% endblock %}
 
@@ -95,7 +94,9 @@
         </button>
       </section>
 
-      {% if similarity_enabled %}{% include 'experiments/image-similarity.html' %}{% endif %}
+      {% if similarity_enabled %}
+      {% with related_media_type='image' %}{% include 'experiments/media-similarity.html' %}{% endwith %}
+      {% endif %}
 
       <aside class="detail-aside info-area">
         {% if source_meta and source_meta.url %}
@@ -206,7 +207,7 @@
 {% endblock %}
 
 {% block extra_body %}
-{% if similarity_enabled %}<script defer src="{{ static_asset('experiments/image-similarity.js') }}"></script>{% endif %}
+{% if similarity_enabled %}<script defer src="{{ static_asset('experiments/media-similarity.js') }}"></script>{% endif %}
 <script src="{{ static_asset('image_viewer_controller.js') }}"></script>
 <script src="{{ static_asset('flow_actions_shared.js') }}"></script>
 <script src="{{ static_asset('flow_media_actions_controller.js') }}"></script>

@@ -1,7 +1,7 @@
 # 媒体索引与本地推荐架构
 
 - 模块: Library Index / Recommendation / Thumbnail
-- 更新时间: 2026-09-30
+- 更新时间: 2026-10-14
 
 ## 现状概述
 
@@ -25,7 +25,9 @@
 - Radio 的选曲和列表都读取索引中的 audio，并过滤当前不存在的文件；外部新增音频在启动或手动同步后可见，下载输出登记后可见。选曲仍不探测音频标签，metadata 按原有入口懒读取。
 - Flow、Library、集合与相似结果复用媒体链接生成规则；相似结果的预览使用 `/thumb`，不再请求原图。
 - 公共链接与字段转换归入 `web/media_payloads.py`，Flow 混排和主题组装归入 `web/flow.py`；删除原 `view_builders.py`。内置 HTTPS 与 PWA 已下线，普通 HTTP/媒体 Range 保留，外部反向代理可提供 HTTPS。
-- 向量与相似分组实现位于 `experiments/similarity/`：配置、向量构建、分组、CLI 与 HTTP 入口集中维护。命令行按需加载；`experiments.similarity.enabled` 控制实验服务注册，关闭后核心无向量运行依赖。连接只从 `config.yaml` 读取，页面只读。浏览器与 `spooly vectorize` 共用同一流程：先图片后视频（视频使用库内缩略图），完成后在本地重建图片分组。`media_vectors` 每个文件一行，`model` 列决定是否属于当前模型；换模型后逐个覆盖重建。相似结果位于 `/experiments/similarity`，读取已保存数据时不请求模型。
+- 向量与相似分组实现位于 `experiments/similarity/`：配置、向量构建、分组、CLI 与 HTTP 入口集中维护。命令行按需加载；`experiments.similarity.enabled` 控制实验服务注册，关闭后核心无向量运行依赖。连接只从 `config.yaml` 读取，页面只读。浏览器与 `spooly vectorize` 共用同一流程：先图片后视频，完成后在本地重建图片分组。视频在时长的 20%、50%、80% 处抽取三帧，少于一秒的视频只取一帧，无法读取的帧会被跳过；抽帧使用临时目录，不改库内封面。每帧单独调用模型，全部完成后才原子保存；暂停在当前请求结束后生效，未完成视频下次从头准备。
+- `media_vectors` 每个文件一行；`video_frames` 保存连续排列的 768 维 float32 帧向量，`embedding` 保存归一化各帧后取平均的向量，二者在同一次写入中更新。`model` 列决定是否属于当前模型；换模型后逐个覆盖重建。旧视频记录没有帧向量，下次准备会更新，旧图片无需重新编码。准备完成前旧视频仍可使用原来的缩略图向量。
+- 图片和视频详情共用 `experiments/media-similarity.html`、`media-similarity.js` 与 `/api/recommend/similar`，接口按文件类型返回同类媒体。视频相似度按两边各帧的最佳匹配取双向平均，避免单个共同镜头主导排序；先用平均向量选出最多 48 个候选，再只对候选逐帧比较，不做全库两两比较。文字搜索中视频取与查询最接近的一帧计分，与图片分数可比。详情页读取已保存向量，不请求模型；视频自动分组尚未实现。
 
 ## 接口与边界
 

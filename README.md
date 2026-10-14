@@ -202,9 +202,9 @@ Options: `--type video|image|all`, `--algorithm sha256|md5`,
 </details>
 
 <details>
-<summary><strong>AI titles, media search and similar images (optional)</strong></summary>
+<summary><strong>AI titles, media search and related media (optional)</strong></summary>
 
-Image titles and tags use a vision model; similar images and description search
+Image titles and tags use a vision model; related media and description search
 use an embedding model. Both are off unless configured:
 
 ```yaml
@@ -232,21 +232,30 @@ it read-only and never displays the key. Spooly always requests 768-dimension
 vectors and sends photos as 512px JPEGs without location or other metadata.
 
 Open **Settings → Similar Images** and choose **Prepare**. The job runs in the
-background, can be paused, and handles photos first, then videos when `ffmpeg` is
-installed (each video is represented by its library thumbnail). Three
+background, can be paused, and handles photos first, then videos when `ffmpeg`
+and `ffprobe` are installed. Videos use three frames at 20%, 50% and 80% of
+their duration; videos shorter than one second use one frame, and frames that
+cannot be read are skipped. Each frame is sent separately, so preparing a video
+usually makes three model requests.
+Sampled images are temporary and do not change the library cover. Three
 consecutive service failures stop the job; an unreadable file is skipped and
 retried next time. Progress lives in the serving process, so after a restart
 start preparation again; prepared files are skipped. Vectors are stored in
 `~/.spooly/spooly.sqlite3` (or `/data` in Docker), and viewing saved results
-never calls a model.
+never calls a model. Pausing finishes the current request; a partially prepared
+video is retried from the beginning. Previously prepared single-thumbnail
+videos are updated on the next preparation, while photo vectors are reused.
 
 After preparation, Spooly selects up to 24 varied photo groups locally from the
 5,000 most recent prepared photos, compared in windows of 64. Library → Explore
 shows a few groups, Flow may reuse an existing gallery slot for one, and photo
-details list related photos from all prepared photos. **Search by description**
+details list related photos from all prepared photos. Video details show
+related videos, ranked by average best frame matches in both directions so
+one shared shot does not determine the whole ranking. Older thumbnail vectors
+remain usable until preparation replaces them. **Search by description**
 in Library → Explore sends one text request per search (Chinese works too) and
-ranks up to 48 photos and videos by similarity, which is not a confidence score.
-Queries are not saved.
+ranks up to 48 photos and videos by similarity, which is not a confidence score;
+a video matches by its closest frame. Queries are not saved.
 
 The same preparation is available from the terminal:
 

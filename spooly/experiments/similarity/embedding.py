@@ -17,6 +17,7 @@ DIMENSIONS = 768
 IMAGE_MAX_SIZE = 512
 IMAGE_QUALITY = 82
 REQUEST_TIMEOUT = 180
+VIDEO_SHORTLIST = 48
 EMBEDDINGGEMMA_MODELS = ('embeddinggemma-2', 'google/embeddinggemma-2')
 
 
@@ -81,11 +82,13 @@ class VectorStore:
         self.database = database
         self.model = model
 
-    def states(self) -> dict[str, tuple[float, int]]:
+    def states(self) -> dict[str, tuple[float, int, bool]]:
         with self.database.connect() as conn:
-            rows = conn.execute('SELECT uri, mtime, size_bytes FROM media_vectors WHERE model = ?',
+            rows = conn.execute("SELECT uri, mtime, size_bytes, "
+                                "media_type != 'video' OR video_frames IS NOT NULL AS prepared "
+                                'FROM media_vectors WHERE model = ?',
                                 (self.model,)).fetchall()
-        return {row['uri']: (row['mtime'], row['size_bytes']) for row in rows}
+        return {row['uri']: (row['mtime'], row['size_bytes'], bool(row['prepared'])) for row in rows}
 
     def count(self, media_type: str | None = None) -> int:
         with self.database.connect() as conn:
@@ -93,17 +96,21 @@ class VectorStore:
                                 'AND (? IS NULL OR media_type = ?)',
                                 (self.model, media_type, media_type)).fetchone()[0]
 
-    def upsert(self, *, uri: str, media_type: str, mtime: float, size_bytes: int, vector: list[float]) -> None:
+    def upsert(self, *, uri: str, media_type: str, mtime: float, size_bytes: int, vector: list[float],
+               frames: list[list[float]] | None = None) -> None:
         indexed_at = datetime.datetime.now(datetime.timezone.utc).isoformat()
+        frame_blob = array('f', (value for frame in frames for value in frame)).tobytes() if frames else None
         with self.database.connect() as conn:
             conn.execute("""
-                INSERT INTO media_vectors(uri, media_type, model, mtime, size_bytes, embedding, embedding_norm, indexed_at)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                INSERT INTO media_vectors(uri, media_type, model, mtime, size_bytes, embedding, embedding_norm,
+                                          indexed_at, video_frames)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
                 ON CONFLICT(uri) DO UPDATE SET media_type = excluded.media_type, model = excluded.model,
                   mtime = excluded.mtime, size_bytes = excluded.size_bytes, embedding = excluded.embedding,
-                  embedding_norm = excluded.embedding_norm, indexed_at = excluded.indexed_at
+                  embedding_norm = excluded.embedding_norm, indexed_at = excluded.indexed_at,
+                  video_frames = excluded.video_frames
             """, (uri, media_type, self.model, mtime, size_bytes, array('f', vector).tobytes(),
-                  _norm(vector), indexed_at))
+                  _norm(vector), indexed_at, frame_blob))
 
     def vectors(self, media_type: str | None = None, *, limit: int = -1) -> list[dict]:
         """Return rows newest first by file modification time."""
@@ -116,13 +123,72 @@ class VectorStore:
                  'vector': array('f', row['embedding'])} for row in rows]
 
     def rank(self, vector, media_type: str | None = None) -> list[dict]:
-        """Rank stored vectors by cosine similarity; callers skip files that are gone."""
-        return _ranked(vector, self.vectors(media_type))
+        """Rank stored vectors by cosine similarity; callers skip files that are gone.
 
-    def similar(self, uri: str) -> list[dict]:
+        A video scores by its best frame, keeping it comparable with a photo and findable by one scene.
+        """
+        with self.database.connect() as conn:
+            rows = conn.execute('SELECT uri, media_type, embedding, embedding_norm, video_frames FROM media_vectors '
+                                'WHERE model = ? AND (? IS NULL OR media_type = ?)',
+                                (self.model, media_type, media_type)).fetchall()
+        norm = _norm(vector)
+        scored = []
+        for row in rows:
+            frames = (_frames(row) if row['media_type'] == 'video'
+                      else [(array('f', row['embedding']), row['embedding_norm'])])
+            scored.append({'uri': row['uri'], 'media_type': row['media_type'],
+                           'score': max(cosine(vector, norm, frame, frame_norm) for frame, frame_norm in frames)})
+        return sorted(scored, key=lambda item: (-item['score'], item['uri']))
+
+    def similar(self, uri: str, media_type: str = 'image') -> list[dict]:
+        if media_type == 'video':
+            return self._similar_videos(uri)
         rows = self.vectors('image')
         query = next((row for row in rows if row['uri'] == uri), None)
         return _ranked(query['vector'], [row for row in rows if row is not query]) if query else []
+
+    def _similar_videos(self, uri: str) -> list[dict]:
+        with self.database.connect() as conn:
+            rows = conn.execute('SELECT uri, embedding, embedding_norm, video_frames FROM media_vectors '
+                                'WHERE model = ? AND media_type = ?', (self.model, 'video')).fetchall()
+        query = next((row for row in rows if row['uri'] == uri), None)
+        if not query:
+            return []
+        # Averaged vectors pick a shortlist cheaply; only that shortlist compares individual frames.
+        shortlist = _ranked(array('f', query['embedding']), [
+            {'uri': row['uri'], 'media_type': 'video', 'vector': array('f', row['embedding']),
+             'norm': row['embedding_norm']} for row in rows if row is not query
+        ])[:VIDEO_SHORTLIST]
+        rows_by_uri = {row['uri']: row for row in rows}
+        query_frames = _frames(query)
+        scored = [{'uri': item['uri'], 'media_type': 'video',
+                   'score': _frame_similarity(query_frames, _frames(rows_by_uri[item['uri']]))}
+                  for item in shortlist]
+        return sorted(scored, key=lambda item: (-item['score'], item['uri']))
+
+
+def _frames(row) -> list[tuple]:
+    # Released thumbnail vectors remain usable until preparation replaces them.
+    values = array('f', row['video_frames'] or row['embedding'])
+    frames = [values[start:start + DIMENSIONS] for start in range(0, len(values), DIMENSIONS)]
+    return [(frame, _norm(frame)) for frame in frames]
+
+
+def mean_vector(frames: list[list[float]]) -> list[float]:
+    """Keep one averaged vector to shortlist related videos before their frames are compared."""
+    normalized = []
+    for frame in frames:
+        norm = _norm(frame)
+        normalized.append([value / norm for value in frame])
+    mean = [sum(values) / len(frames) for values in zip(*normalized)]
+    return mean if _norm(mean) > 0 else frames[0]
+
+
+def _frame_similarity(left, right) -> float:
+    """Average best matches in both directions, so one shared shot cannot dominate."""
+    scores = [[cosine(a, a_norm, b, b_norm) for b, b_norm in right] for a, a_norm in left]
+    return (sum(max(row) for row in scores) / len(left)
+            + sum(max(column) for column in zip(*scores)) / len(right)) / 2
 
 
 def _ranked(vector, rows: list[dict]) -> list[dict]:

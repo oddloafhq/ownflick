@@ -189,8 +189,10 @@ its model volume, use `down --volumes`.
 
 The service has a 2 GiB memory ceiling, two CPUs, one request slot and a
 2,048-token context. These are deployment settings, not a promise that every
-input fits. Spooly sends one 512px JPEG per photo and uses each video's
-library thumbnail, so a long video is represented by a single frame. The real-media
+input fits. Spooly sends one 512px JPEG per photo and up to three sampled
+frames per video, each in a separate request; short videos use one frame.
+Sampled images do not change the library cover. Video details compare
+the saved frame vectors locally. The real-media
 pilot above is encouraging, but does not establish retrieval quality for a
 larger or more varied collection.
 

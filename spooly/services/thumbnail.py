@@ -1,5 +1,6 @@
 import hashlib
 import io
+import math
 import os
 import tempfile
 import subprocess as sp
@@ -103,6 +104,24 @@ class ThumbnailService:
                 continue
         return removed
 
+    def sample_video_frames(self, uri: str, directory: Path) -> list[Path]:
+        """Extract up to three temporary frames without changing the library cover; unreadable ones are skipped."""
+        source = self.library.resolve_path(uri)
+        if not source or not source.is_file():
+            raise OSError('Video not found.')
+        duration = self._probe_duration(source)
+        if not duration:
+            raise OSError('Could not read the video duration.')
+        timestamps = [0.0] if duration < 1.0 else [duration * fraction for fraction in (0.2, 0.5, 0.8)]
+        frames = []
+        for index, timestamp in enumerate(timestamps):
+            frame = directory / f'frame-{index}.jpg'
+            if self._generate(source, frame, timestamp, auto_timestamp=False):
+                frames.append(frame)
+        if not frames:
+            raise OSError('Could not extract a video frame.')
+        return frames
+
     @staticmethod
     def _probe_duration(path: Path) -> float | None:
         try:
@@ -111,7 +130,7 @@ class ThumbnailService:
                 '-of', 'default=noprint_wrappers=1:nokey=1', str(path),
             ], stderr=sp.DEVNULL, timeout=10)
             duration = float(output.decode().strip())
-            return duration if duration > 0 else None
+            return duration if math.isfinite(duration) and duration > 0 else None
         except (OSError, sp.SubprocessError, ValueError):
             return None
 

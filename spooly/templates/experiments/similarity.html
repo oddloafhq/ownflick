@@ -49,7 +49,7 @@
       <button id="media-index-pause" class="dui-btn dui-btn-sm dui-btn-ghost" type="button" hidden>Pause</button>
       <span id="media-index-progress" class="text-sm opacity-70" role="status" aria-live="polite">{% if job.state == 'failed' %}{{ job.error }}{% endif %}</span>
     </div>
-    <p class="text-sm opacity-70">Preparing sends each pending photo, or a video's thumbnail, to the service below as a small JPEG without location or other metadata.</p>
+    <p class="text-sm opacity-70">Preparing sends each pending photo, or up to three frames per video, to the service below as small JPEGs without location or other metadata. Related videos appear on video details after preparation.</p>
     <dl class="text-sm grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 break-words">
       <dt class="opacity-60">Service</dt><dd>{{ connection.base_url }}</dd>
       <dt class="opacity-60">Model</dt><dd>{{ connection.model }}</dd>

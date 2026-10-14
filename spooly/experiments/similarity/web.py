@@ -3,6 +3,7 @@ from types import SimpleNamespace
 from flask import render_template, request
 
 from spooly.web import read_int_arg
+from spooly.services.library import IMAGE_EXTENSIONS, VIDEO_EXTENSIONS
 from spooly.web.media_payloads import build_feed_media_item
 from .config import load_embedding_config
 from .embedding import EmbeddingClient
@@ -36,7 +37,8 @@ def register_similarity_routes(app, library_service, thumbnail_service, app_data
             path = library_service.resolve_path(uri)
             if not path or not path.is_file():
                 continue
-            items.append({**build_feed_media_item(uri, candidate['media_type']), 'score': candidate['score']})
+            items.append({**build_feed_media_item(uri, candidate['media_type']), 'score': candidate['score'],
+                          'title': uri.rsplit('/', 1)[-1].rsplit('.', 1)[0]})
             if len(items) >= limit:
                 break
         return items
@@ -56,11 +58,14 @@ def register_similarity_routes(app, library_service, thumbnail_service, app_data
                                                      limit=read_int_arg('limit', 24, minimum=1, maximum=48))}
 
     @app.route('/api/recommend/similar')
-    def api_similar_images():
+    def api_similar_media():
         uri = library_service.find_existing_uri(request.args.get('uri') or '')
-        if not uri or not library_service.resolve_path(uri):
+        path = library_service.resolve_path(uri)
+        if not path or not path.is_file():
             return {'success': False, 'error': 'File not found'}, 404
-        candidates = indexer.store.similar(uri)
+        if path.suffix.lower() not in IMAGE_EXTENSIONS | VIDEO_EXTENSIONS:
+            return {'success': False, 'error': 'Unsupported media type'}, 400
+        candidates = indexer.store.similar(uri, 'video' if path.suffix.lower() in VIDEO_EXTENSIONS else 'image')
         items = existing_items(candidates, read_int_arg('limit', 12, minimum=1, maximum=48))
         return {'success': True, 'data': {'indexed': bool(candidates), 'items': items}}
 

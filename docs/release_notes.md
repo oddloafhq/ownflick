@@ -1,5 +1,11 @@
 # Release notes
 
+## v0.8.48 (2026-10-14) — related videos
+
+- Video details show related videos using saved vectors; browsing results does not call the model.
+- Preparation samples three frames per video (one for videos shorter than a second; unreadable frames are skipped), keeping individual vectors for video similarity and description search, where a video matches by its best frame. Existing thumbnail-only video vectors are updated by the next preparation; photo vectors and library covers are kept.
+- Photo and video details share the same related-media component and API. Video grouping and Flow behavior are unchanged.
+
 ## v0.8.47 (2026-10-14) — optional media discovery
 
 - Prepare photos and videos from Settings → Similar Images, with progress and pause. Videos use their library thumbnail and need `ffmpeg`.

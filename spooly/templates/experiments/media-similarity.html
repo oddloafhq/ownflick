@@ -1,0 +1,5 @@
+{% set is_video = related_media_type == 'video' %}
+<section id="similar-media-section" class="similar-area{% if is_video %} mt-8{% endif %}" data-uri="{{ uri }}" data-media-type="{{ related_media_type }}" data-limit="{{ 6 if is_video else 8 }}" hidden>
+  <h2 class="detail-label">{{ 'Related videos' if is_video else 'Related photos' }}</h2>
+  <div id="similar-media-grid" class="grid {{ 'grid-cols-2 lg:grid-cols-3' if is_video else 'grid-cols-2 sm:grid-cols-4' }} gap-3"></div>
+</section>

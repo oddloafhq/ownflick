@@ -1,9 +1,11 @@
-"""Prepare vectors for photos and video thumbnails, then refresh photo groups."""
+"""Prepare vectors for photos and sampled video frames, then refresh photo groups."""
 
 import shutil
 import threading
+from pathlib import Path
+from tempfile import TemporaryDirectory
 
-from .embedding import EmbeddingClient, VectorStore
+from .embedding import EmbeddingClient, VectorStore, mean_vector
 from .groups import rebuild_photo_groups
 
 
@@ -11,7 +13,7 @@ SERVICE_FAILURE_LIMIT = 3
 
 
 def videos_supported() -> bool:
-    return shutil.which('ffmpeg') is not None
+    return shutil.which('ffmpeg') is not None and shutil.which('ffprobe') is not None
 
 
 class MediaIndexer:
@@ -44,7 +46,7 @@ class MediaIndexer:
         """Files without a vector from the configured model, or changed since they were indexed."""
         states = self.store.states()
         return [record for record in (self.records() if records is None else records)
-                if states.get(record['uri']) != (record['mtime'], record['size_bytes'])]
+                if states.get(record['uri']) != (record['mtime'], record['size_bytes'], True)]
 
     def status(self) -> dict:
         records = self.records()
@@ -54,16 +56,22 @@ class MediaIndexer:
                 'total': len(records), 'prepared': len(records) - pending, 'pending': pending,
                 'videos_supported': videos_supported()}
 
-    def index(self, record: dict, client: EmbeddingClient) -> None:
-        source = record['path']
+    def index(self, record: dict, client: EmbeddingClient, *, should_stop=lambda: False) -> bool:
+        frames = None
         if record['media_type'] == 'video':
-            # The library thumbnail is the frame people already see, including a manually chosen one.
-            source = (self.thumbnails.cached_thumbnail(record['uri'])
-                      or self.thumbnails.generate_thumbnail(record['uri']))
-            if not source:
-                raise OSError('Could not create a video thumbnail.')
+            with TemporaryDirectory(prefix='spooly-video-') as directory:
+                sources = self.thumbnails.sample_video_frames(record['uri'], Path(directory))
+                frames = []
+                for source in sources:
+                    if should_stop():
+                        return False
+                    frames.append(client.embed_image(source))
+            vector = mean_vector(frames)
+        else:
+            vector = client.embed_image(record['path'])
         self.store.upsert(uri=record['uri'], media_type=record['media_type'], mtime=record['mtime'],
-                          size_bytes=record['size_bytes'], vector=client.embed_image(source))
+                          size_bytes=record['size_bytes'], vector=vector, frames=frames)
+        return True
 
     def run(self, *, limit: int = 0, should_stop=lambda: False, progress=lambda state, record=None, error='': None) -> dict:
         """Index pending files, then regroup photos; return the final state."""
@@ -79,7 +87,8 @@ class MediaIndexer:
                 return {**state, 'state': 'paused'}
             error = ''
             try:
-                self.index(record, client)
+                if not self.index(record, client, should_stop=should_stop):
+                    return {**state, 'state': 'paused'}
                 service_failures = 0
             except RuntimeError as exc:
                 # Service errors repeat for every file, so stop instead of exhausting the queue.

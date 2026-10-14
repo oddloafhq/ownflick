@@ -322,6 +322,11 @@ def _migrate_011_simplify_media_vectors(conn: sqlite3.Connection) -> None:
     """)
 
 
+def _migrate_012_add_video_frames(conn: sqlite3.Connection) -> None:
+    """Keep sampled video vectors with their existing media record."""
+    conn.execute('ALTER TABLE media_vectors ADD COLUMN video_frames BLOB')
+
+
 MIGRATIONS = [
     Migration(1, "create_image_vectors", _migrate_001_create_image_vectors),
     Migration(2, "create_media_similarity_groups", _migrate_002_create_media_similarity_groups),
@@ -334,6 +339,7 @@ MIGRATIONS = [
     Migration(9, "create_playback_positions", _migrate_009_create_playback_positions),
     Migration(10, "add_media_dimensions", _migrate_010_add_media_dimensions),
     Migration(11, "simplify_media_vectors", _migrate_011_simplify_media_vectors),
+    Migration(12, "add_video_frames", _migrate_012_add_video_frames),
 ]
 
 

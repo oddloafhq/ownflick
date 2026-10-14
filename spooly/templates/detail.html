@@ -143,6 +143,9 @@
         {% endif %}
       </aside>
     </div>
+    {% if similarity_enabled and is_video %}
+    {% with uri=file, related_media_type='video' %}{% include 'experiments/media-similarity.html' %}{% endwith %}
+    {% endif %}
   </div>
 </div>
 {% endblock %}
@@ -157,4 +160,5 @@
   };
 </script>
 <script src="{{ static_asset('detail_page_controller.js') }}"></script>
+{% if similarity_enabled and is_video %}<script defer src="{{ static_asset('experiments/media-similarity.js') }}"></script>{% endif %}
 {% endblock %}
