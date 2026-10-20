@@ -16,6 +16,10 @@
 </p>
 
 <p align="center">
+  <a href="https://oddloaf.dev/spooly/">Website</a> · <a href="https://pypi.org/project/spooly/">PyPI</a>
+</p>
+
+<p align="center">
   <img src="https://raw.githubusercontent.com/oddloafhq/spooly/main/docs/screenshots/hero.jpg" alt="Spooly Library grid on desktop with the Flow swipe feed on a phone">
 </p>
 

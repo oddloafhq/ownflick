@@ -5,7 +5,7 @@ description = "A private, self-hosted feed for your videos, photos, and music"
 authors = ["Oddloaf <hello@oddloaf.dev>"]
 readme = "README.md"
 license = "MIT"
-homepage = "https://oddloaf.dev"
+homepage = "https://oddloaf.dev/spooly/"
 repository = "https://github.com/oddloafhq/spooly"
 keywords = ["spooly", "tiktok", "jellyfin", "vlc"]
 
