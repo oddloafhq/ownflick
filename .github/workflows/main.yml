@@ -10,7 +10,13 @@ on:
     inputs:
       retry_release:
         description: Retry the current version's OwnFlick upload and image publication
-        required: true
+        required: false
+        default: false
+        type: boolean
+      publish_image_only:
+        description: Publish GHCR images without retrying PyPI
+        required: false
+        default: false
         type: boolean
 
 permissions:
@@ -180,8 +186,8 @@ jobs:
   publish-image:
     name: Publish image to GHCR
     if: >-
-      always() && needs.publish-ownflick-pypi.result == 'success' &&
-      needs.docker.result == 'success'
+      always() && needs.docker.result == 'success' &&
+      (needs.publish-ownflick-pypi.result == 'success' || inputs.publish_image_only)
     needs: [publish-ownflick-pypi, docker]
     runs-on: ubuntu-latest
     timeout-minutes: 45
@@ -217,8 +223,8 @@ jobs:
           tags: |
             type=semver,pattern={{version}}
             type=semver,pattern={{major}}.{{minor}}
-            type=raw,value=${{ steps.version.outputs.full }},enable=${{ inputs.retry_release || false }}
-            type=raw,value=${{ steps.version.outputs.minor }},enable=${{ inputs.retry_release || false }}
+            type=raw,value=${{ steps.version.outputs.full }},enable=${{ inputs.retry_release || inputs.publish_image_only || false }}
+            type=raw,value=${{ steps.version.outputs.minor }},enable=${{ inputs.retry_release || inputs.publish_image_only || false }}
             type=raw,value=latest
       - name: Build and push linux/amd64 and linux/arm64
         uses: docker/build-push-action@v6
