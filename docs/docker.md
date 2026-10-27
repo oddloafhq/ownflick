@@ -81,7 +81,7 @@ docker rm -f ownflick  # then run the same docker run command again
 # or: docker compose pull && docker compose up -d
 ```
 
-Tags: `latest`, a release such as `0.8.49`, or a minor line such as `0.8`.
+Tags: `latest`, a release such as `0.8.50`, or a minor line such as `0.8`.
 
 Video sites change often. If downloads fail before a new image is published,
 update yt-dlp inside the running container (lost when the container is

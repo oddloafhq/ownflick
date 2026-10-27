@@ -1,6 +1,15 @@
 # Release notes
 
-## v0.8.49 (unreleased) — OwnFlick
+## v0.8.50 (2026-10-27) — refreshed guides and media
+
+- The EmbeddingGemma Docker guide linked from Similar Images now uses OwnFlick
+  commands while documenting the compatible `spooly` config and container names.
+- The CasaOS candidate uses the OwnFlick name, current image, and repository
+  links. Its app ID and service name stay stable for earlier manual installs.
+- New OwnFlick share image, demo video, and poster show the current browser UI.
+  Previous Spooly media files remain available for existing links.
+
+## v0.8.49 (2026-10-27) — OwnFlick
 
 - Spooly is now OwnFlick. The original graphic mark remains; the wordmark,
   browser interface, and public project links use the new name.
