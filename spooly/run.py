@@ -64,11 +64,11 @@ def main():
     config = load_config()
 
     # Normalize argv to support the following forms.
-    # 1) spooly                      -> serve
-    # 2) spooly /path                -> serve /path
-    # 3) spooly --port 9000          -> serve --port 9000
-    # 4) spooly thumbs /path         -> thumbs /path
-    # 5) spooly /path thumbs         -> thumbs /path
+    # 1) ownflick                    -> serve
+    # 2) ownflick /path              -> serve /path
+    # 3) ownflick --port 9000        -> serve --port 9000
+    # 4) ownflick thumbs /path       -> thumbs /path
+    # 5) ownflick /path thumbs       -> thumbs /path
     argv = sys.argv[1:]
     if '-h' not in argv and '--help' not in argv:
         if 'thumbs' in argv:
@@ -82,19 +82,19 @@ def main():
 
     # Parse commands and options.
     parser = argparse.ArgumentParser(
-        description='Spooly - local media server',
+        description='OwnFlick - local media server',
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog='''
 Examples:
-  spooly                                 # Start the server (default)
-  spooly /path/to/media                  # Use a media directory
-  spooly --port 9000                     # Use a custom port
-  spooly serve /path --port 9000         # Explicitly use the serve command
-  spooly thumbs /path --overwrite        # Generate thumbnails in bulk
-  spooly dedupe /path --dry-run          # Preview duplicate files
-  spooly dedupe /path --execute          # Delete duplicates and keep the oldest
-  spooly vectorize /path --limit 200     # Prepare 200 photos/videos for similarity
-  spooly auth set-password               # Set a new access password
+  ownflick                                # Start the server (default)
+  ownflick /path/to/media                 # Use a media directory
+  ownflick --port 9000                    # Use a custom port
+  ownflick serve /path --port 9000        # Explicitly use the serve command
+  ownflick thumbs /path --overwrite       # Generate thumbnails in bulk
+  ownflick dedupe /path --dry-run         # Preview duplicate files
+  ownflick dedupe /path --execute         # Delete duplicates and keep the oldest
+  ownflick vectorize /path --limit 200    # Prepare 200 photos/videos for similarity
+  ownflick auth set-password              # Set a new access password
         '''
     )
 
@@ -153,7 +153,7 @@ Examples:
     if cmd == 'thumbs':
         media_root = args.media_root or os.environ.get('MEDIA_ROOT') or config.get('media_root')
         if not media_root:
-            parser.error('Specify a media directory:\n  - spooly thumbs /path/to/media\n  - or set MEDIA_ROOT=/path/to/media')
+            parser.error('Specify a media directory:\n  - ownflick thumbs /path/to/media\n  - or set MEDIA_ROOT=/path/to/media')
         media_path = Path(media_root)
         if not media_path.exists() or not media_path.is_dir():
             print(f"Error: Media directory is unavailable: {media_root}", file=sys.stderr)
@@ -168,7 +168,7 @@ Examples:
 
         media_root = args.media_root or os.environ.get('MEDIA_ROOT') or config.get('media_root')
         if not media_root:
-            parser.error('Specify a media directory:\n  - spooly dedupe /path/to/media\n  - or set MEDIA_ROOT=/path/to/media')
+            parser.error('Specify a media directory:\n  - ownflick dedupe /path/to/media\n  - or set MEDIA_ROOT=/path/to/media')
 
         media_path = Path(media_root)
         if not media_path.exists() or not media_path.is_dir():
@@ -241,7 +241,7 @@ Examples:
 
     # Validate media directories.
     if not media_root and not media_sources:
-        parser.error('Specify a media directory:\n  - command line: spooly /path/to/media\n  - environment: MEDIA_ROOT=/path/to/media\n  - configuration: ~/.config/spooly/config.yaml')
+        parser.error('Specify a media directory:\n  - command line: ownflick /path/to/media\n  - environment: MEDIA_ROOT=/path/to/media\n  - configuration: ~/.config/spooly/config.yaml')
 
     if media_root:
         media_path = Path(media_root).expanduser()
@@ -279,7 +279,7 @@ Examples:
     os.environ['MEDIA_ROOT'] = str(media_path.absolute())
 
     # Start the server.
-    print("Starting Spooly server...")
+    print("Starting OwnFlick server...")
     if media_sources:
         print("Media sources:")
         for source in media_sources:
@@ -305,11 +305,11 @@ Examples:
     bootstrap = app.extensions.get('auth_bootstrap')
     print("Access authentication: enabled")
     if bootstrap and bootstrap.generated_password:
-        print("┌────────────────────────────────────────────┐")
-        print("│ Initial access password                          │")
-        print(f"│ {bootstrap.generated_password:<42} │")
-        print("│ Save it; change it with spooly auth set-password │")
-        print("└────────────────────────────────────────────┘")
+        print("┌──────────────────────────────────────────────────────┐")
+        print("│ Initial access password                              │")
+        print(f"│ {bootstrap.generated_password:<52} │")
+        print("│ Save it; change it with ownflick auth set-password   │")
+        print("└──────────────────────────────────────────────────────┘")
     download_manager = app.extensions['download_manager']
     previous_sigterm = signal.signal(signal.SIGTERM, lambda *_: sys.exit(0))
     try:

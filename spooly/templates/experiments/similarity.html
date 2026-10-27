@@ -55,7 +55,7 @@
       <dt class="opacity-60">Model</dt><dd>{{ connection.model }}</dd>
       <dt class="opacity-60">API key</dt><dd>{{ {'config': 'From config.yaml', 'environment': 'From the server environment', 'none': 'None'}[connection.key_source] }}</dd>
     </dl>
-    <p class="text-sm opacity-70">Change the <code>embedding</code> section of <code>config.yaml</code> and restart Spooly to use another service. A new model prepares its own vectors; files it has not reached yet are left out of search. For a local model, see the <a class="underline" href="https://github.com/oddloafhq/spooly/blob/main/deployment/embedding/README.md" target="_blank" rel="noopener">Docker guide</a>.</p>
+    <p class="text-sm opacity-70">Change the <code>embedding</code> section of <code>config.yaml</code> and restart OwnFlick to use another service. A new model prepares its own vectors; files it has not reached yet are left out of search. For a local model, see the <a class="underline" href="https://github.com/oddloafhq/ownflick/blob/main/deployment/embedding/README.md" target="_blank" rel="noopener">Docker guide</a>.</p>
   </section>
 </main>
 {% endblock %}

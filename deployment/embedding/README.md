@@ -173,7 +173,7 @@ the new model, and search and related photos include them as they are reached.
 
 Spooly packages from PyPI or GHCR do not contain this build recipe. Download
 the matching GitHub release's source archive, or view the
-[repository deployment directory](https://github.com/oddloafhq/spooly/tree/main/deployment/embedding),
+[repository deployment directory](https://github.com/oddloafhq/ownflick/tree/main/deployment/embedding),
 on the Docker host before running the commands above.
 
 ## Release memory

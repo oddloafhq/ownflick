@@ -2,7 +2,7 @@
 <html lang="en">
   <head>
     <meta charset="utf-8" />
-    <title>Spooly · {{ instance_name }}</title>
+    <title>OwnFlick · {{ instance_name }}</title>
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
     <meta name="theme-color" content="#171815" />
     <link rel="icon" href="{{ static_asset('brand/favicon.ico') }}" sizes="32x32">
@@ -29,8 +29,8 @@
       </nav>
       {% else %}
       <a class="app-wordmark" href="/" aria-label="Return home">
-        <img class="app-wordmark-lockup brand-lockup-light" src="{{ static_asset('brand/spooly-lockup.svg') }}" alt="spooly" width="110">
-        <img class="app-wordmark-lockup brand-lockup-dark" src="{{ static_asset('brand/spooly-lockup-dark.svg') }}" alt="spooly" width="110">
+        <img class="app-wordmark-lockup brand-lockup-light" src="{{ static_asset('brand/ownflick-lockup.svg') }}" alt="OwnFlick" width="142">
+        <img class="app-wordmark-lockup brand-lockup-dark" src="{{ static_asset('brand/ownflick-lockup-dark.svg') }}" alt="OwnFlick" width="142">
       </a>
       {% endif %}
       <button id="app-nav-menu-trigger" class="mobile-nav-trigger" type="button" aria-label="Open media and tools" aria-expanded="false" aria-controls="app-nav-menu">
@@ -39,7 +39,7 @@
     </header>
 
     <nav class="floating-dock" aria-label="Main navigation">
-      <a class="rail-brand" href="/" aria-label="Spooly home">{% include 'brand_mark.html' %}</a>
+      <a class="rail-brand" href="/" aria-label="OwnFlick home">{% include 'brand_mark.html' %}</a>
       <a href="/" class="dock-item {% if menu == 'home' %}active{% endif %}" data-label="Home" aria-label="Home" {% if menu == 'home' %}aria-current="page"{% endif %}>
         <i data-feather="home"></i><span class="rail-tooltip">Home</span>
       </a>

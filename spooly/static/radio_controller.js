@@ -849,9 +849,9 @@
   function updateMediaSession() {
     if (!('mediaSession' in navigator) || !currentTrack) return;
     navigator.mediaSession.metadata = new MediaMetadata({
-      title: currentTrack.title || 'Spooly Radio',
+      title: currentTrack.title || 'OwnFlick Radio',
       artist: currentTrack.artist || getStationName(),
-      album: currentTrack.album || 'Spooly',
+      album: currentTrack.album || 'OwnFlick',
       artwork: buildMediaArtwork(currentTrack),
     });
     updateMediaSessionState();

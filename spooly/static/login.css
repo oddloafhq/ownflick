@@ -66,7 +66,7 @@ button, input { font: inherit; }
 .scene-foot { position: relative; z-index: 2; }
 .scene-top { display: flex; align-items: center; justify-content: space-between; }
 .wordmark { display: flex; align-items: center; gap: 11px; font-size: 13px; font-weight: 680; letter-spacing: -.02em; }
-.wordmark img { display: block; width: 132px; height: auto; }
+.wordmark img { display: block; width: 165px; height: auto; }
 .scene-index { color: rgba(255,255,255,.38); font: 700 9px/1 ui-monospace, "SFMono-Regular", Menlo, monospace; letter-spacing: .16em; }
 .scene-copy { max-width: 700px; padding: 10vh 0 8vh; animation: reveal 850ms 80ms var(--ease) both; }
 .scene-kicker { margin: 0 0 20px; color: var(--acid); font: 720 10px/1 ui-monospace, "SFMono-Regular", Menlo, monospace; letter-spacing: .22em; }

@@ -35,7 +35,7 @@ def run_vectorize(config, args, parser):
     limit = max(int(args.limit or 0), 0)
     selected = min(status['pending'], limit) if limit else status['pending']
 
-    print('Spooly media preparation')
+    print('OwnFlick media preparation')
     print(f"  service: {embedding['base_url']}")
     print(f"  model: {embedding['model']}")
     print(f"  photos: {status['images']}")

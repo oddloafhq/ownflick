@@ -33,7 +33,7 @@ def image_card(canvas, source, xy, width, radius=20):
 
 def brand(canvas, xy):
     image_card(canvas, ROOT / 'brand/spooly-avatar-512.png', xy, 58, 14)
-    text(ImageDraw.Draw(canvas), (xy[0] + 74, xy[1] + 8), 'Spooly', 38, bold=True)
+    text(ImageDraw.Draw(canvas), (xy[0] + 74, xy[1] + 8), 'OwnFlick', 38, bold=True)
 
 
 def main():
@@ -49,7 +49,7 @@ def main():
     text(draw, (56, 184), 'Your media.\nWorth another look.', 48, bold=True)
     text(draw, (58, 328), 'A private feed for your\nphotos and videos.', 28)
     text(draw, (58, 460), 'SELF-HOSTED  /  OPEN SOURCE', 17, BLUE, True)
-    text(draw, (58, 559), 'github.com/oddloafhq/spooly', 20)
+    text(draw, (58, 559), 'github.com/oddloafhq/ownflick', 20)
     image_card(cover, ROOT / 'docs/screenshots/library-desktop.jpg', (565, 95), 660)
     draw.rounded_rectangle((980, 171, 1201, 631), 30, fill=INK)
     image_card(cover, ROOT / 'docs/screenshots/flow-mobile.jpg', (988, 179), 205, 23)
@@ -67,7 +67,7 @@ def main():
         text(draw, (68, 226), heading, 56, bold=True)
         text(draw, (70, 402), caption, 30)
         text(draw, (70, 591), 'SELF-HOSTED  /  OPEN SOURCE', 18, BLUE, True)
-        text(draw, (70, 646), 'github.com/oddloafhq/spooly', 23)
+        text(draw, (70, 646), 'github.com/oddloafhq/ownflick', 23)
         draw.rounded_rectangle((894, 44, 1190, 676), 28, fill=INK)
         background_path = args.recordings / f'{name}-background.png'
         background.save(background_path)

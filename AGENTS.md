@@ -8,7 +8,7 @@
 
 ## Build, Test, and Development Commands
 - `poetry install` sets up the Python environment with Flask, Waitress, and PyYAML.
-- `poetry run spooly ~/MediaLibrary` launches the server against a local media directory; add `--port 9000` to test alternative ports.
+- `poetry run ownflick ~/MediaLibrary` launches the server against a local media directory; add `--port 9000` to test alternative ports. The `spooly` command remains supported.
 - `npm run build-css` watches Tailwind sources and regenerates `static/output.css` while you iterate on UI changes.
 - `npm run build-css-prod` minifies Tailwind output for release builds; run before publishing or creating screenshots.
 
@@ -26,7 +26,7 @@
 ## Commit & Pull Request Guidelines
 - Match the existing history: short, imperative messages (`fix: adjust video playback layout`, `Release v0.4.0 …`); include scope prefixes when they clarify intent.
 - Each PR should explain the problem, list functional changes, and link issues; attach screenshots or clips for UI updates.
-- Confirm local testing (`spooly` run, Tailwind build, pytest when available) in the PR description and call out config files touched.
+- Confirm local testing (`ownflick` run, Tailwind build, pytest when available) in the PR description and call out config files touched.
 
 ## Configuration Tips
 - Accept `MEDIA_ROOT`, `SPOOLY_HOST`, and `SPOOLY_PORT` via env vars or `~/.config/spooly/config.yaml`; document defaults in PRs when they change.
@@ -34,10 +34,10 @@
 
 ## Application Notes
 
-Spooly is maintained by Oddloaf. The Flask application factory in `spooly/app.py` registers routes from `spooly/web/`; shared media services live in `spooly/services/`. Configuration priority is CLI arguments, environment variables, config file, then defaults. Browser controllers and page styles live in `spooly/static/`; templates pass boot data with minimal inline scripts.
+OwnFlick is maintained by Oddloaf. The Flask application factory in `spooly/app.py` registers routes from `spooly/web/`; shared media services live in `spooly/services/`. Configuration priority is CLI arguments, environment variables, config file, then defaults. Browser controllers and page styles live in `spooly/static/`; templates pass boot data with minimal inline scripts.
 
 ## Product Identity
-- Public product name: Spooly. Maintainer: Oddloaf (`github.com/oddloafhq`, `https://oddloaf.dev`, `hello@oddloaf.dev`).
+- Public product name: OwnFlick, formerly Spooly. Maintainer: Oddloaf (`github.com/oddloafhq`, `https://oddloaf.dev`, `hello@oddloaf.dev`). Keep existing `spooly` package, CLI, data paths, and `SPOOLY_*` variables compatible.
 - Use the Oddloaf identity for public metadata, documentation, and release materials; keep unrelated personal identities out of these surfaces.
 - This repository contains the server and Web UI. Native clients and device-pairing APIs are excluded pending a separate product design.
 - Brand geometry is defined in `scripts/build_brand.py`; generated assets live in `brand/`, `spooly/static/brand/`, and `spooly/templates/brand_mark.html`.

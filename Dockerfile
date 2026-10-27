@@ -28,7 +28,7 @@ RUN useradd --uid 1000 --user-group --home-dir /data --no-create-home spooly \
 # /data holds the database, password, thumbnails, cookies and an optional config.yaml.
 ENV HOME=/data \
     SPOOLY_INSTANCE=/data \
-    SPOOLY_NAME=Spooly \
+    SPOOLY_NAME=OwnFlick \
     PYTHONUNBUFFERED=1
 
 USER spooly
@@ -38,5 +38,5 @@ EXPOSE 8000
 HEALTHCHECK --interval=30s --timeout=5s --start-period=120s --retries=3 \
     CMD ["python", "-c", "import os, urllib.request; from spooly.run import load_config; port = int(os.environ.get('SPOOLY_PORT', 0)) or load_config().get('port') or 8000; urllib.request.urlopen('http://127.0.0.1:%s/login' % port, timeout=4)"]
 
-ENTRYPOINT ["spooly"]
+ENTRYPOINT ["ownflick"]
 CMD ["serve", "/media"]
