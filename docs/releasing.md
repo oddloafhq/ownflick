@@ -17,10 +17,9 @@ Configure PyPI Trusted Publishers for both `spooly` and `ownflick` with:
 - Workflow: `main.yml`
 - Environment: `pypi`
 
-Update the existing `spooly` publisher after the repository rename. Add a pending
-publisher for `ownflick` before the first release; a pending publisher does not
-reserve the name. Both publishers use the same repository, workflow, and
-environment.
+Both PyPI projects now exist. Confirm the Trusted Publisher on each project's
+Publishing page before a release. Both publishers use the same repository,
+workflow, and environment.
 
 The workflow runs these jobs:
 
@@ -41,6 +40,5 @@ directory. The `spooly` Python package and `SPOOLY_*` configuration remain the
 compatibility contract; `ownflick` depends on `spooly` rather than installing a
 second copy of the application files.
 
-GHCR creates the new package as private on its first push. Make `ownflick`
-public in GitHub package settings, confirm both packages grant this repository
-Actions write access, then verify anonymous pulls of both `latest` tags.
+Confirm both packages grant this repository Actions write access, then verify
+anonymous pulls of both `latest` tags.
