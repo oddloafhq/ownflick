@@ -13,11 +13,13 @@ already own. The server and browser interface are open source and self-hosted.
 
 ## Assets
 
-- `spooly-demo.mp4`: 24-second silent walkthrough recorded under the former
-  Spooly name, H.264, 1280 × 720. Shows real browser interactions with the
-  local demo library. English captions are included.
-- `social-preview.jpg`: historical Spooly share image, retained for old links.
-- `demo-poster.jpg`: preview frame for the video.
+- `ownflick-demo.mp4`: 24-second silent walkthrough with the current name,
+  H.264, 1280 × 720. Shows real browser interactions with the local demo
+  library. English captions are included.
+- `ownflick-social-preview.jpg`: current share image and CasaOS thumbnail.
+- `ownflick-demo-poster.jpg`: preview frame for the current video.
+- `spooly-demo.mp4`, `social-preview.jpg`, and `demo-poster.jpg`: historical
+  Spooly materials retained for existing links.
 - [Screenshots](../screenshots/): desktop and mobile product views.
 - [Brand](../../brand/): icon and vector wordmarks.
 
@@ -33,7 +35,7 @@ authentication disabled only for this local recording instance. Build the
 production CSS before recording. Then:
 
 ```sh
-node scripts/record_demo.mjs /tmp/spooly-recording
+node scripts/record_demo.mjs /tmp/ownflick-recording
 poetry run python scripts/build_promo.py
 ```
 

@@ -1,7 +1,7 @@
 name: spooly
 services:
   spooly:
-    image: ghcr.io/oddloafhq/spooly:0.8.46
+    image: ghcr.io/oddloafhq/ownflick:0.8.49
     container_name: spooly
     # Store-created bind directories are owned by root. Media stays read-only.
     # Set a non-root UID:GID after granting it access to the data directory.
@@ -34,23 +34,23 @@ x-casaos:
     - screenshot-1.jpg
     - screenshot-2.jpg
   title:
-    en_US: Spooly
-    zh_CN: Spooly
+    en_US: OwnFlick
+    zh_CN: OwnFlick
   tagline:
     en_US: A private, swipeable feed for your local photos and videos.
     zh_CN: 把本地照片和视频变成可滑动浏览的私人信息流。
   description:
     en_US: >-
-      Rediscover your own media with Spooly. Browse photos and videos together
+      Rediscover your own media with OwnFlick. Browse photos and videos together
       in Flow, explore a timeline library, and save favorites and collections.
       Open source, self-hosted, and accessible from a phone or desktop browser.
       This store configuration mounts media read-only for browsing; downloads
-      and deletion require a writable media mount. Spooly complements your
+      and deletion require a writable media mount. OwnFlick complements your
       existing storage and backup setup.
     zh_CN: >-
-      用 Spooly 重新发现自己的媒体：滑动浏览照片和视频，查看时间线媒体库，
+      用 OwnFlick 重新发现自己的媒体：滑动浏览照片和视频，查看时间线媒体库，
       保存喜欢的内容和合集。开源、自托管，手机和电脑浏览器均可访问。
-      此商店配置以只读方式挂载媒体；下载和删除需要可写挂载。Spooly 用于浏览，
+      此商店配置以只读方式挂载媒体；下载和删除需要可写挂载。OwnFlick 用于浏览，
       请继续使用已有的存储与备份方案。
   category: Media
   developer: Oddloaf
@@ -58,7 +58,7 @@ x-casaos:
   architectures:
     - amd64
     - arm64
-  version: "0.8.46"
+  version: "0.8.49"
   tips:
     before_install:
       en_US: >-
@@ -74,6 +74,6 @@ x-casaos:
         写入自动创建的数据目录；如需非 root 运行，请先授权数据目录并设置 user
         为对应 UID:GID。大型媒体库首次扫描需要等待。
   website: https://oddloaf.dev
-  repo: https://github.com/oddloafhq/spooly
-  support: https://github.com/oddloafhq/spooly/issues
-  docs: https://github.com/oddloafhq/spooly/blob/main/docs/docker.md
+  repo: https://github.com/oddloafhq/ownflick
+  support: https://github.com/oddloafhq/ownflick/issues
+  docs: https://github.com/oddloafhq/ownflick/blob/main/docs/docker.md

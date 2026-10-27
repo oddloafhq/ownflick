@@ -1,4 +1,4 @@
-"""Build share images and a silent demo from real browser recordings.
+"""Build OwnFlick share images and a silent demo from real browser recordings.
 
 Run after scripts/record_demo.mjs. Requires Pillow and ffmpeg.
 """
@@ -38,7 +38,7 @@ def brand(canvas, xy):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('--recordings', type=Path, default=Path('/tmp/spooly-recording'))
+    parser.add_argument('--recordings', type=Path, default=Path('/tmp/ownflick-recording'))
     parser.add_argument('--out', type=Path, default=ROOT / 'docs/promo')
     args = parser.parse_args()
     args.out.mkdir(parents=True, exist_ok=True)
@@ -53,7 +53,7 @@ def main():
     image_card(cover, ROOT / 'docs/screenshots/library-desktop.jpg', (565, 95), 660)
     draw.rounded_rectangle((980, 171, 1201, 631), 30, fill=INK)
     image_card(cover, ROOT / 'docs/screenshots/flow-mobile.jpg', (988, 179), 205, 23)
-    cover.save(args.out / 'social-preview.jpg', quality=92, optimize=True)
+    cover.save(args.out / 'ownflick-social-preview.jpg', quality=92, optimize=True)
 
     scenes = [
         ('flow', 'Swipe through\nyour own media.', 'Photos and videos, together.\nPrivate. On your server.'),
@@ -82,9 +82,9 @@ def main():
     playlist = args.recordings / 'concat.txt'
     playlist.write_text(''.join(f"file '{name}.mp4'\n" for name, _, _ in scenes))
     subprocess.run(['ffmpeg', '-y', '-loglevel', 'error', '-f', 'concat', '-safe', '0',
-                    '-i', str(playlist), '-c', 'copy', '-movflags', '+faststart', str(args.out / 'spooly-demo.mp4')], check=True)
-    subprocess.run(['ffmpeg', '-y', '-loglevel', 'error', '-ss', '2', '-i', str(args.out / 'spooly-demo.mp4'),
-                    '-frames:v', '1', str(args.out / 'demo-poster.jpg')], check=True)
+                    '-i', str(playlist), '-c', 'copy', '-movflags', '+faststart', str(args.out / 'ownflick-demo.mp4')], check=True)
+    subprocess.run(['ffmpeg', '-y', '-loglevel', 'error', '-ss', '0.5', '-i', str(args.out / 'ownflick-demo.mp4'),
+                    '-frames:v', '1', str(args.out / 'ownflick-demo-poster.jpg')], check=True)
 
 
 if __name__ == '__main__':

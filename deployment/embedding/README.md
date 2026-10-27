@@ -3,7 +3,7 @@
 This alternative uses llama.cpp built for SSE 4.2, with AVX, AVX2, AVX512,
 FMA, F16C and BMI2 disabled. Runtime dependencies stay inside Docker.
 The CPU-only service does not mount the media library and listens on the
-host loopback interface. No Spooly settings or existing vectors are changed.
+host loopback interface. No OwnFlick settings or existing vectors are changed.
 
 ## Verified on 2026-10-13
 
@@ -19,7 +19,7 @@ With two CPU threads and a two-CPU quota:
 | First synthetic 128px image | 23.36 s |
 | Second synthetic 128px image | 23.34 s |
 | Short English text | 0.18 s |
-| 512px synthetic JPEG through Spooly's existing client | 36.19 s |
+| 512px synthetic JPEG through OwnFlick's existing client | 36.19 s |
 
 Docker reported approximately 1.11 GiB running memory after the requests.
 The cgroup peak, which also includes charged file cache and diagnostic
@@ -29,7 +29,7 @@ inputs.
 
 ### Real-media pilot on the same host
 
-An isolated Spooly database indexed all 28 JPGs available in a three-source
+An isolated OwnFlick database indexed all 28 JPGs available in a three-source
 media library (25 photos/posters and three album covers). The source files were
 read only, the model was reached through `127.0.0.1`, and no cloud embedding
 request was made. The library also contained hundreds of videos, which this
@@ -72,7 +72,7 @@ and verified GGUF model volume remain available. From this directory, start it w
 docker compose start
 ```
 
-Spooly's compatible client also worked without authentication. No real media
+OwnFlick's compatible client also worked without authentication. No real media
 index was rebuilt or switched.
 
 ## Build, download and start
@@ -106,9 +106,10 @@ If your Docker build cannot reach package sources, pass your existing build
 proxy settings using Docker's predefined proxy build arguments. Do not add
 proxy credentials to the Dockerfile or commit them to the repository.
 
-## Connect Spooly
+## Connect OwnFlick
 
-Add the service to `~/.config/spooly/config.yaml` and restart Spooly:
+Add the service to `~/.config/spooly/config.yaml` and restart OwnFlick. The
+configuration path retains its original name for existing installations:
 
 ```yaml
 experiments:
@@ -119,7 +120,7 @@ embedding:
   model_name: embeddinggemma-2
 ```
 
-Spooly always requests 768 dimensions, the model's native output verified by
+OwnFlick always requests 768 dimensions, the model's native output verified by
 this recipe. The image request uses the OpenRouter-shaped input:
 
 ```json
@@ -131,13 +132,14 @@ this recipe. The image request uses the OpenRouter-shaped input:
 }
 ```
 
-The loopback service has no authentication and ignores any key Spooly finds in
+The loopback service has no authentication and ignores any key OwnFlick finds in
 its environment. Do not expose this service publicly.
 
-### If Spooly also runs in Docker
+### If OwnFlick also runs in Docker
 
 Create a private Docker network once, then attach both Compose services with
-the included overrides. From the Spooly repository root:
+the included overrides. The default Compose service and container remain named
+`spooly` for existing installations. From the OwnFlick repository root:
 
 ```sh
 docker network create spooly-ai
@@ -150,28 +152,28 @@ From `deployment/embedding`, after building and downloading the model:
 docker compose -f compose.yaml -f compose.network.yaml up -d --no-build
 ```
 
-If Spooly was started with `docker run` instead of Compose, attach its existing
+If OwnFlick was started with `docker run` instead of Compose, attach its existing
 container with `docker network connect spooly-ai spooly`; reconnect it after
-recreating the Spooly container.
+recreating the container.
 
 Use `base_url: http://embedding:9379/v1` in that case. Keep using the same
 Compose overrides when recreating either service. The model service remains
-bound to the host's loopback port; the shared Docker network lets Spooly reach
+bound to the host's loopback port; the shared Docker network lets OwnFlick reach
 it by service name.
 
-Prepare media from **Settings → Similar Images**, or from the Spooly container:
+Prepare media from **Settings → Similar Images**, or from the OwnFlick container:
 
 ```sh
-docker exec spooly spooly vectorize /media --dry-run --limit 100
-docker exec -it spooly spooly vectorize /media --limit 100
+docker exec spooly ownflick vectorize /media --dry-run --limit 100
+docker exec -it spooly ownflick vectorize /media --limit 100
 ```
 
-On a host installation, run the same commands as `spooly vectorize ~/Videos …`.
+On a host installation, run the same commands as `ownflick vectorize ~/Videos …`.
 
 Switching from Gemini changes the vector space. Files are prepared again for
 the new model, and search and related photos include them as they are reached.
 
-Spooly packages from PyPI or GHCR do not contain this build recipe. Download
+OwnFlick packages from PyPI or GHCR do not contain this build recipe. Download
 the matching GitHub release's source archive, or view the
 [repository deployment directory](https://github.com/oddloafhq/ownflick/tree/main/deployment/embedding),
 on the Docker host before running the commands above.
@@ -189,7 +191,7 @@ its model volume, use `down --volumes`.
 
 The service has a 2 GiB memory ceiling, two CPUs, one request slot and a
 2,048-token context. These are deployment settings, not a promise that every
-input fits. Spooly sends one 512px JPEG per photo and up to three sampled
+input fits. OwnFlick sends one 512px JPEG per photo and up to three sampled
 frames per video, each in a separate request; short videos use one frame.
 Sampled images do not change the library cover. Video details compare
 the saved frame vectors locally. The real-media
