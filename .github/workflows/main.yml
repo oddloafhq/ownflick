@@ -6,6 +6,12 @@ on:
   pull_request:
   release:
     types: [published]
+  workflow_dispatch:
+    inputs:
+      retry_release:
+        description: Retry the current version's OwnFlick upload and image publication
+        required: true
+        type: boolean
 
 permissions:
   contents: read
@@ -61,7 +67,7 @@ jobs:
           poetry build --output dist/spooly
           poetry --directory distribution/ownflick-pypi build --output ../../dist/ownflick
       - name: Save release packages
-        if: github.event_name == 'release'
+        if: github.event_name == 'release' || inputs.retry_release
         uses: actions/upload-artifact@v4
         with:
           name: python-package-dists
@@ -115,8 +121,11 @@ jobs:
 
   publish-ownflick-pypi:
     name: Publish OwnFlick to PyPI
-    if: github.event_name == 'release'
-    needs: [publish-spooly-pypi]
+    if: >-
+      always() &&
+      ((github.event_name == 'release' && needs.publish-spooly-pypi.result == 'success') ||
+      (inputs.retry_release && needs.check.result == 'success' && needs.docker.result == 'success'))
+    needs: [check, docker, publish-spooly-pypi]
     runs-on: ubuntu-latest
     timeout-minutes: 5
     environment:
@@ -133,6 +142,8 @@ jobs:
         uses: pypa/gh-action-pypi-publish@76f52bc884231f62b9a034ebfe128415bbaabdfc
         with:
           packages-dir: dist/ownflick/
+          skip-existing: ${{ inputs.retry_release || false }}
+          verbose: ${{ inputs.retry_release || false }}
 
   docker:
     name: Docker image smoke test
@@ -168,7 +179,9 @@ jobs:
 
   publish-image:
     name: Publish image to GHCR
-    if: github.event_name == 'release'
+    if: >-
+      always() && needs.publish-ownflick-pypi.result == 'success' &&
+      needs.docker.result == 'success'
     needs: [publish-ownflick-pypi, docker]
     runs-on: ubuntu-latest
     timeout-minutes: 45
@@ -184,6 +197,17 @@ jobs:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Read package version
+        id: version
+        run: |
+          python - <<'PY' >> "$GITHUB_OUTPUT"
+          import tomllib
+          from pathlib import Path
+
+          version = tomllib.loads(Path('pyproject.toml').read_text())['tool']['poetry']['version']
+          print(f'full={version}')
+          print(f'minor={".".join(version.split(".")[:2])}')
+          PY
       - id: meta
         uses: docker/metadata-action@v5
         with:
@@ -193,6 +217,8 @@ jobs:
           tags: |
             type=semver,pattern={{version}}
             type=semver,pattern={{major}}.{{minor}}
+            type=raw,value=${{ steps.version.outputs.full }},enable=${{ inputs.retry_release || false }}
+            type=raw,value=${{ steps.version.outputs.minor }},enable=${{ inputs.retry_release || false }}
             type=raw,value=latest
       - name: Build and push linux/amd64 and linux/arm64
         uses: docker/build-push-action@v6
