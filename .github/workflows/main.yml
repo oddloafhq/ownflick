@@ -46,7 +46,6 @@ jobs:
         uses: actions/cache@v4
         with:
           path: |
-            .venv
             ~/.cache/pip
           key: ${{ runner.os }}-python-${{ steps.python.outputs.python-version }}-${{ hashFiles('poetry.lock') }}
       - name: Install dependencies
@@ -94,7 +93,6 @@ jobs:
         uses: actions/cache@v4
         with:
           path: |
-            .venv
             ~/.cache/pip
           key: ${{ runner.os }}-python-${{ steps.python.outputs.python-version }}-${{ hashFiles('poetry.lock') }}
       - name: Install dependencies
