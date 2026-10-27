@@ -1,5 +1,5 @@
-// README screenshots from a running Spooly that serves demo-media/ without login:
-//   SPOOLY_INSTANCE=/tmp/spooly-demo FLASK_AUTH_ENABLED=false spooly demo-media --host 127.0.0.1 --port 8793
+// README screenshots from a running OwnFlick that serves demo-media/ without login:
+//   SPOOLY_INSTANCE=/tmp/ownflick-demo FLASK_AUTH_ENABLED=false ownflick demo-media --host 127.0.0.1 --port 8793
 //   node scripts/screenshots.mjs
 import { chromium } from 'playwright-core';
 import { mkdirSync, readFileSync } from 'node:fs';

@@ -1,9 +1,9 @@
 // Record real browser interactions against the isolated demo-media server.
-// BASE_URL=http://127.0.0.1:8793 node scripts/record_demo.mjs /tmp/spooly-recording
+// BASE_URL=http://127.0.0.1:8793 node scripts/record_demo.mjs /tmp/ownflick-recording
 import { chromium } from 'playwright-core';
 import { mkdirSync, renameSync } from 'node:fs';
 
-const out = process.argv[2] || '/tmp/spooly-recording';
+const out = process.argv[2] || '/tmp/ownflick-recording';
 mkdirSync(out, { recursive: true });
 const browser = await chromium.launch(process.env.CHROME_PATH
   ? { executablePath: process.env.CHROME_PATH }

@@ -15,7 +15,7 @@ def run_vectorize(config, args, parser):
     media_root = args.media_root or os.environ.get('MEDIA_ROOT') or config.get('media_root')
     media_sources = normalize_media_sources(config, getattr(args, 'media_source', None), media_root=media_root)
     if not media_root and not media_sources:
-        parser.error('Specify a media directory:\n  - spooly vectorize /path/to/media\n  - or configure media_root/media_sources')
+        parser.error('Specify a media directory:\n  - ownflick vectorize /path/to/media\n  - or configure media_root/media_sources')
     media_path = Path(media_root).expanduser() if media_root else Path(media_sources[0]['path']).expanduser()
     for source in media_sources:
         source_path = Path(str(source.get('path') or '')).expanduser()

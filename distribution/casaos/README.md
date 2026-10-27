@@ -1,10 +1,13 @@
 # CasaOS / ZimaOS submission
 
-This folder is a proposed app definition for the IceWhale app store. It is not
-an approved listing. Copy its contents to `Apps/Spooly/` in that repository.
+This folder is a proposed OwnFlick app definition for the IceWhale app store.
+It is not an approved listing. Copy its contents to `Apps/OwnFlick/` when
+submitting it. The existing `dev.oddloaf.spooly` app ID, Compose service, and
+container name stay stable for anyone who installed the earlier candidate.
+`thumbnail.jpg` is a copy of `docs/promo/ownflick-social-preview.jpg`.
 
 The default store mount exposes `/DATA/Media` read-only. This allows browsing
-without giving Spooly permission to change existing media. Users must select
+without giving OwnFlick permission to change existing media. Users must select
 their library directory. Downloads and trash deletion need a writable mount.
 
 Store-created data directories are commonly root-owned, so this definition
