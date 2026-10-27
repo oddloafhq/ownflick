@@ -1,6 +1,6 @@
 {
-  "name": "spooly",
-  "version": "0.8.48",
+  "name": "ownflick",
+  "version": "0.8.49",
   "description": "A private, self-hosted feed for your videos, photos, and music",
   "scripts": {
     "build-css": "tailwindcss -i ./spooly/static/input.css -o ./spooly/static/output.css --watch",
@@ -14,6 +14,7 @@
     "tailwindcss": "^4.3.0"
   },
   "keywords": [
+    "ownflick",
     "spooly",
     "tiktok",
     "pinterest",

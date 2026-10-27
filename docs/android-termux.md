@@ -1,6 +1,6 @@
 # Android with Termux
 
-Spooly runs on an Android phone with [Termux](https://termux.dev). An old phone
+OwnFlick runs on an Android phone with [Termux](https://termux.dev). An old phone
 on a charger becomes a small always-on media server, and a phone on the road
 can share its videos with a tablet over its hotspot. This setup has run for
 more than a year on a Pixel 4a.
@@ -14,7 +14,7 @@ Play build is experimental.
 ```bash
 pkg update && pkg upgrade
 pkg install python python-pillow ffmpeg
-pip install spooly
+pip install ownflick
 termux-setup-storage          # allow access to shared storage
 ```
 
@@ -24,7 +24,7 @@ termux-setup-storage          # allow access to shared storage
 
 ```bash
 termux-wake-lock              # keep running with the screen off
-spooly ~/storage/shared/Movies --name Pixel
+ownflick ~/storage/shared/Movies --name Pixel
 ```
 
 Add more folders with `--media-source`, for example
@@ -35,23 +35,23 @@ Open `http://<phone-address>:8000` on another device on the same Wi-Fi. The
 phone's address is under **Settings → Network & internet → Internet → (your
 Wi-Fi)**. On the phone itself use `http://127.0.0.1:8000`.
 
-Spooly's data lives in Termux's private storage (`~/.spooly`). Uninstalling
+OwnFlick's data lives in Termux's private storage (`~/.spooly`). Uninstalling
 Termux deletes it, but not your media.
 
 ## Keep it running
 
 - Exempt Termux from battery optimization in Android settings.
-- To start Spooly when the phone boots, install
+- To start OwnFlick when the phone boots, install
   [Termux:Boot](https://f-droid.org/packages/com.termux.boot/), open it once,
-  then create `~/.termux/boot/spooly`:
+  then create `~/.termux/boot/ownflick`:
 
   ```sh
   #!/data/data/com.termux/files/usr/bin/sh
   termux-wake-lock
-  spooly ~/storage/shared/Movies --name Pixel > ~/spooly.log 2>&1
+  ownflick ~/storage/shared/Movies --name Pixel > ~/ownflick.log 2>&1
   ```
 
-  and make it executable with `chmod +x ~/.termux/boot/spooly`.
+  and make it executable with `chmod +x ~/.termux/boot/ownflick`.
 - If Termux shows `[Process completed (signal 9)]`, Android 12 or later
   stopped its child processes. See Termux's notes on the
   [phantom process killer](https://github.com/agnostic-apollo/Android-Docs/blob/master/en/docs/apps/processes/phantom-cached-and-empty-processes.md).

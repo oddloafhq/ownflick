@@ -1,7 +1,7 @@
-# Spooly with Docker Compose: edit the media path, then run `docker compose up -d`.
+# OwnFlick with Docker Compose. Service and data names stay for existing deployments.
 services:
   spooly:
-    image: ghcr.io/oddloafhq/spooly:latest
+    image: ghcr.io/oddloafhq/ownflick:latest
     container_name: spooly
     restart: unless-stopped
     init: true

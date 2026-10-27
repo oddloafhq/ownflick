@@ -1,5 +1,16 @@
 # Release notes
 
+## v0.8.49 (unreleased) — OwnFlick
+
+- Spooly is now OwnFlick. The original graphic mark remains; the wordmark,
+  browser interface, and public project links use the new name.
+- `pip install ownflick` installs the application and adds the `ownflick`
+  command. The `spooly` package and command continue to receive updates.
+- The same multi-architecture image is published at both
+  `ghcr.io/oddloafhq/ownflick` and `ghcr.io/oddloafhq/spooly`.
+- Existing `~/.spooly` and `/data` directories, `SPOOLY_*` variables, and
+  Compose service names remain valid. No data migration is needed.
+
 ## v0.8.48 (2026-10-14) — related videos
 
 - Video details show related videos using saved vectors; browsing results does not call the model.

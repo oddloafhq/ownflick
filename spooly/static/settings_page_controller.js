@@ -133,7 +133,7 @@
   syncThemeButtons();
 
   refreshButton.addEventListener('click', () => {
-    confirmAction('Rescan the media library?', 'The scan will reconcile files added, moved, or deleted while Spooly was running.', 'Start Scan', 'primary', () => {
+    confirmAction('Rescan the media library?', 'The scan will reconcile files added, moved, or deleted while OwnFlick was running.', 'Start Scan', 'primary', () => {
       runButton(refreshButton, 'Scanning…', async () => {
         const payload = await requestJson('/api/library/sync', { method: 'POST' });
         await loadStats();

@@ -1,21 +1,24 @@
 # Docker
 
-The image `ghcr.io/oddloafhq/spooly` runs Spooly on Linux servers and NAS
+The image `ghcr.io/oddloafhq/ownflick` runs OwnFlick on Linux servers and NAS
 devices (`linux/amd64` and `linux/arm64`). It includes `ffmpeg`, `yt-dlp`,
 `gallery-dl` and Deno, the JavaScript runtime yt-dlp uses for YouTube.
 
-On macOS and Windows, `pip install spooly` is faster: Docker Desktop reads
-mounted folders slowly, and Spooly scans the whole library at startup.
+The former image name, `ghcr.io/oddloafhq/spooly`, receives the same releases.
+Existing deployments can keep that image reference and their current data mount.
+
+On macOS and Windows, `pip install ownflick` is faster: Docker Desktop reads
+mounted folders slowly, and OwnFlick scans the whole library at startup.
 
 ## Start
 
 ```bash
-mkdir spooly-data                       # create it yourself so your user owns it
-docker run -d --name spooly --restart unless-stopped --init \
+mkdir ownflick-data                     # create it yourself so your user owns it
+docker run -d --name ownflick --restart unless-stopped --init \
   --user "$(id -u):$(id -g)" -p 8000:8000 -e TZ=Asia/Shanghai \
-  -v ~/Videos:/media -v "$PWD/spooly-data:/data" \
-  ghcr.io/oddloafhq/spooly:latest
-docker logs spooly                      # shows the initial access password
+  -v ~/Videos:/media -v "$PWD/ownflick-data:/data" \
+  ghcr.io/oddloafhq/ownflick:latest
+docker logs ownflick                    # shows the initial access password
 ```
 
 Or download [`compose.yaml`](../compose.yaml), edit the media path and time
@@ -32,16 +35,16 @@ Open `http://<server-address>:8000`.
 
 Run the container as the user that owns your media (`--user` or `user:` in
 Compose). On Synology this is often `1026:100`. If Docker creates a missing
-host folder, it belongs to root and Spooly cannot write to it.
+host folder, it belongs to root and OwnFlick cannot write to it.
 
 ## Password
 
-The first start prints a generated password in `docker logs spooly`. To choose
+The first start prints a generated password in `docker logs ownflick`. To choose
 it instead, set `SPOOLY_AUTH_PASSWORD` before the first start; it is ignored
 once `/data/auth.json` exists. Change it later with:
 
 ```bash
-docker exec -it spooly spooly auth set-password
+docker exec -it ownflick ownflick auth set-password
 ```
 
 ## Configuration
@@ -73,8 +76,8 @@ reverse proxy.
 ## Updating
 
 ```bash
-docker pull ghcr.io/oddloafhq/spooly:latest
-docker rm -f spooly    # then run the same docker run command again
+docker pull ghcr.io/oddloafhq/ownflick:latest
+docker rm -f ownflick  # then run the same docker run command again
 # or: docker compose pull && docker compose up -d
 ```
 
@@ -85,7 +88,7 @@ update yt-dlp inside the running container (lost when the container is
 recreated):
 
 ```bash
-docker exec -u 0 spooly pip install -U "yt-dlp[default]"
+docker exec -u 0 ownflick pip install -U "yt-dlp[default]"
 ```
 
 ## Notes

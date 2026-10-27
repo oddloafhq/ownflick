@@ -98,7 +98,7 @@ def verify_thumbnails(media_root: str | Path) -> dict:
 
 
 def main():
-    parser = argparse.ArgumentParser(description='Spooly thumbnail tool')
+    parser = argparse.ArgumentParser(description='OwnFlick thumbnail tool')
     parser.add_argument('media_root', nargs='?', help='Media root (optional when MEDIA_ROOT is set)')
     parser.add_argument('--overwrite', action='store_true', help='Rebuild existing thumbnails')
     parser.add_argument('--limit', type=int, default=0, help='Maximum items to process (0 means all)')

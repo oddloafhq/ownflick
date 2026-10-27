@@ -1,4 +1,4 @@
-"""Regenerate the Spooly brand assets from one geometry definition.
+"""Regenerate the OwnFlick brand assets from one geometry definition.
 
 The mark is a spool seen from the side: one line wound around a hub, with the
 loose end running off along the ground. It is drawn on a 24-unit grid with a
@@ -105,8 +105,8 @@ def favicon_svg() -> str:
     )
 
 
-def word_paths(font_dir: Path, size: float, tracking_em: float) -> tuple[str, float, float, float]:
-    """Return (svg path data, advance width, ascender height, descender depth) for 'spooly'."""
+def word_paths(font_dir: Path, word: str, size: float, tracking_em: float) -> tuple[str, float, float, float]:
+    """Return SVG path data and dimensions for a wordmark."""
     font = TTFont(font_dir / "outfit-latin-500-normal.woff2")
     scale = size / font["head"].unitsPerEm
     glyph_set = font.getGlyphSet()
@@ -114,7 +114,7 @@ def word_paths(font_dir: Path, size: float, tracking_em: float) -> tuple[str, fl
     bounds = BoundsPen(glyph_set)
     parts = []
     x = 0.0
-    for char in "spooly":
+    for char in word:
         glyph = glyph_set[cmap[ord(char)]]
         glyph.draw(bounds)
         pen = SVGPathPen(glyph_set, ntos=lambda v: f"{v:.2f}".rstrip("0").rstrip("."))
@@ -126,10 +126,10 @@ def word_paths(font_dir: Path, size: float, tracking_em: float) -> tuple[str, fl
     return "".join(parts), x - tracking_em * size, y_max * scale, -y_min * scale
 
 
-def lockup_svg(font_dir: Path, stroke: str, dot: str, text_color: str) -> str:
+def lockup_svg(font_dir: Path, word: str, stroke: str, dot: str, text_color: str) -> str:
     size = 72.0
     pad = 8.0
-    path, advance, ascender, descender = word_paths(font_dir, size, tracking_em=-0.02)
+    path, advance, ascender, descender = word_paths(font_dir, word, size, tracking_em=-0.02)
     left, top, right, bottom = BOUNDS
     # The tail sits on the text baseline and the spool rises to the height of the l.
     scale = ascender / (bottom - top)
@@ -141,7 +141,7 @@ def lockup_svg(font_dir: Path, stroke: str, dot: str, text_color: str) -> str:
     height = baseline + descender + pad
     return (
         f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 {width:.0f} {height:.0f}" '
-        'role="img" aria-label="Spooly">\n'
+        f'role="img" aria-label="{word}">\n'
         f'  <g transform="translate({mark_x:.2f} {mark_y:.2f}) scale({scale:.4f})">{mark_group(stroke, dot)}</g>\n'
         f'  <path transform="translate({text_x:.2f} {baseline:.2f})" fill="{text_color}" d="{path}"/>\n'
         "</svg>\n"
@@ -211,10 +211,14 @@ def main() -> None:
     (OUT_DIR / "spooly-mark.svg").write_text(mark_svg(INK, BLUE))
     (OUT_DIR / "spooly-mark-dark.svg").write_text(mark_svg(INK_DARK, BLUE_DARK))
     (OUT_DIR / "spooly-mark-mono.svg").write_text(mark_svg("currentColor", "currentColor"))
-    (OUT_DIR / "spooly-lockup.svg").write_text(lockup_svg(args.font_dir, INK, BLUE, INK))
-    (OUT_DIR / "spooly-lockup-dark.svg").write_text(lockup_svg(args.font_dir, INK_DARK, BLUE_DARK, INK_DARK))
+    (OUT_DIR / "spooly-lockup.svg").write_text(lockup_svg(args.font_dir, "spooly", INK, BLUE, INK))
+    (OUT_DIR / "spooly-lockup-dark.svg").write_text(lockup_svg(args.font_dir, "spooly", INK_DARK, BLUE_DARK, INK_DARK))
+    (OUT_DIR / "ownflick-lockup.svg").write_text(lockup_svg(args.font_dir, "ownflick", INK, BLUE, INK))
+    (OUT_DIR / "ownflick-lockup-dark.svg").write_text(lockup_svg(args.font_dir, "ownflick", INK_DARK, BLUE_DARK, INK_DARK))
     shutil.copy2(OUT_DIR / "spooly-lockup.svg", WEB_DIR / "spooly-lockup.svg")
     shutil.copy2(OUT_DIR / "spooly-lockup-dark.svg", WEB_DIR / "spooly-lockup-dark.svg")
+    shutil.copy2(OUT_DIR / "ownflick-lockup.svg", WEB_DIR / "ownflick-lockup.svg")
+    shutil.copy2(OUT_DIR / "ownflick-lockup-dark.svg", WEB_DIR / "ownflick-lockup-dark.svg")
     render_mark(512, BLUE, PAPER, PAPER, fit=0.56).save(OUT_DIR / "spooly-avatar-512.png", optimize=True)
 
     (TEMPLATE_DIR / "brand_mark.html").write_text(inline_svg())

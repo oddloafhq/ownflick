@@ -2,14 +2,14 @@
 
 ## Purpose
 
-This directory records Spooly's key design decisions, release changes, and implementation constraints to reduce repeated discussion and regressions in later iterations.
+This directory records OwnFlick's key design decisions, release changes, and implementation constraints to reduce repeated discussion and regressions in later iterations.
 
 ## Documents
 
-- [Releasing Spooly](releasing.md): local checks, publisher configuration, and the first release.
+- [Releasing OwnFlick](releasing.md): local checks, publisher configuration, and the first release.
 - [Web architecture](web-convergence-plan.md): current module boundaries, runtime constraints, and verification.
 - [Docker](docker.md): container image, volumes, permissions, and updates.
-- [Android with Termux](android-termux.md): running Spooly on an Android phone.
+- [Android with Termux](android-termux.md): running OwnFlick on an Android phone.
 - `docs/mixed-feed-design.md`: design and implementation notes for the mixed video and image Flow feed.
 - `docs/flow-interaction-unification.md`: the shared interaction model for Flow, Library, and Favorites, including title entry points and asynchronous state rules.
 - `docs/media-index-and-recommendation.md`: data flow and implementation boundaries for media indexing, safe synchronization, thumbnails, and local recommendations.

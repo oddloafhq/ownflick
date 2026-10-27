@@ -43,8 +43,23 @@ jobs:
           poetry install
       - name: Run tests
         run: poetry run pytest -q
-      - name: Build wheel & sdist
-        run: poetry build
+      - name: Check matching release versions
+        run: |
+          python - <<'PY'
+          import json
+          import tomllib
+          from pathlib import Path
+
+          root = tomllib.loads(Path('pyproject.toml').read_text())['tool']['poetry']['version']
+          alias = tomllib.loads(Path('distribution/ownflick-pypi/pyproject.toml').read_text())['tool']['poetry']
+          npm = json.loads(Path('package.json').read_text())['version']
+          assert root == alias['version'] == npm
+          assert alias['dependencies']['spooly'] == f'=={root}'
+          PY
+      - name: Build Spooly and OwnFlick wheels & sdists
+        run: |
+          poetry build --output dist/spooly
+          poetry --directory distribution/ownflick-pypi build --output ../../dist/ownflick
       - name: Save release packages
         if: github.event_name == 'release'
         uses: actions/upload-artifact@v4
@@ -77,8 +92,8 @@ jobs:
       - name: Run tests
         run: poetry run pytest -q
 
-  publish-pypi:
-    name: Publish to PyPI
+  publish-spooly-pypi:
+    name: Publish Spooly compatibility package
     if: github.event_name == 'release'
     needs: [check, compatibility, docker]
     runs-on: ubuntu-latest
@@ -95,6 +110,29 @@ jobs:
           path: dist/
       - name: Publish wheel & sdist
         uses: pypa/gh-action-pypi-publish@76f52bc884231f62b9a034ebfe128415bbaabdfc
+        with:
+          packages-dir: dist/spooly/
+
+  publish-ownflick-pypi:
+    name: Publish OwnFlick to PyPI
+    if: github.event_name == 'release'
+    needs: [publish-spooly-pypi]
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    environment:
+      name: pypi
+      url: https://pypi.org/project/ownflick/
+    permissions:
+      id-token: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: python-package-dists
+          path: dist/
+      - name: Publish wheel & sdist
+        uses: pypa/gh-action-pypi-publish@76f52bc884231f62b9a034ebfe128415bbaabdfc
+        with:
+          packages-dir: dist/ownflick/
 
   docker:
     name: Docker image smoke test
@@ -131,7 +169,7 @@ jobs:
   publish-image:
     name: Publish image to GHCR
     if: github.event_name == 'release'
-    needs: [publish-pypi, docker]
+    needs: [publish-ownflick-pypi, docker]
     runs-on: ubuntu-latest
     timeout-minutes: 45
     permissions:
@@ -149,7 +187,9 @@ jobs:
       - id: meta
         uses: docker/metadata-action@v5
         with:
-          images: ghcr.io/${{ github.repository }}
+          images: |
+            ghcr.io/${{ github.repository }}
+            ghcr.io/oddloafhq/spooly
           tags: |
             type=semver,pattern={{version}}
             type=semver,pattern={{major}}.{{minor}}

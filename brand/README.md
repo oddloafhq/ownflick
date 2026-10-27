@@ -1,6 +1,7 @@
-# Spooly brand
+# OwnFlick brand
 
-Logo assets for Spooly (server, web UI, README, PyPI).
+Logo assets for OwnFlick (server, web UI, README, PyPI). The original Spooly
+mark, colors, favicons, and touch icon are retained. Only the wordmark changes.
 
 ## Meaning
 
@@ -36,10 +37,10 @@ it becomes the background and the whole mark, hub included, turns paper white.
 
 ## Wordmark
 
-Lowercase `spooly` in Outfit Medium (500), tracking −0.02em, converted to
+Lowercase `ownflick` in Outfit Medium (500), tracking −0.02em, converted to
 outlines so no font is needed. Outfit is licensed under the SIL Open Font
-License 1.1. In the lockup the tail sits on the text baseline and the spool
-rises to the height of the `l`.
+License 1.1. In the lockup the tail sits on the text baseline. The older
+`spooly-lockup` files remain for existing links.
 
 ## Files
 
@@ -48,8 +49,9 @@ rises to the height of the `l`.
 | `spooly-mark.svg` | Mark on light surfaces |
 | `spooly-mark-dark.svg` | Mark on dark surfaces |
 | `spooly-mark-mono.svg` | One-color mark using `currentColor` |
-| `spooly-lockup.svg` | Mark + wordmark on light surfaces (README header) |
-| `spooly-lockup-dark.svg` | Mark + wordmark on dark surfaces |
+| `ownflick-lockup.svg` | Mark + wordmark on light surfaces (README header) |
+| `ownflick-lockup-dark.svg` | Mark + wordmark on dark surfaces |
+| `spooly-lockup*.svg` | Previous wordmark, kept for existing links |
 | `spooly-avatar-512.png` | Social avatar, GitHub org or repo image; safe under a circular crop |
 | `../spooly/templates/brand_mark.html` | Inline SVG for templates; the line follows the text color, the dot reads `--brand-dot` |
 | `../spooly/static/brand/favicon.svg` | Tab icon, follows the system light/dark setting |
