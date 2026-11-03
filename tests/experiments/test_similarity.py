@@ -53,9 +53,9 @@ def similarity(tmp_path, monkeypatch):
     config_path.parent.mkdir(parents=True)
     config_path.write_text(json.dumps(yaml_config))
 
-    def open_app(embedding=config):
+    def open_app(embedding=config, exclude=None):
         return create_app({'TESTING': True, 'MEDIA_ROOT': media, 'EMBEDDING_CONFIG': embedding,
-                           'EXPERIMENTS': yaml_config['experiments']}).test_client()
+                           'EXPERIMENTS': yaml_config['experiments'], 'MEDIA_EXCLUDE': exclude}).test_client()
 
     def run_cli(*args):
         monkeypatch.setattr(sys, 'argv', ['spooly', 'vectorize', str(media), *args])
@@ -93,6 +93,27 @@ def test_preparation_builds_vectors_and_groups_once(similarity):
     assert similarity.client.post('/api/ai/embedding-index/run').status_code == 202
     assert wait_for_job(similarity.client)['processed'] == 0
     assert len(similarity.wire.calls) == 3
+
+
+def test_excluded_prepared_images_stay_out_of_search_recommendations_and_groups(similarity):
+    similarity.run_cli('--yes')
+    client = similarity.open_app(exclude=['b.jpg'])
+    assert client.get('/api/library/similar-groups').json['data']['items'] == []
+    recommended = client.get('/api/recommend/similar?uri=a.jpg').json['data']['items']
+    assert [item['name'] for item in recommended] == ['@default/c.jpg']
+    searched = client.post('/api/library/media-search', json={'query': 'red'}).json['data']['items']
+    assert {item['name'] for item in searched} == {'@default/a.jpg', '@default/c.jpg'}
+
+
+def test_vectorize_cli_combines_global_and_source_exclusions(similarity):
+    config_path = similarity.media.parent / '.config/spooly/config.yaml'
+    config = json.loads(config_path.read_text())
+    config['exclude'] = ['b.jpg']
+    config['media_sources'] = [{'id': 'default', 'path': str(similarity.media), 'exclude': ['c.jpg']}]
+    config_path.write_text(json.dumps(config))
+    similarity.run_cli('--yes')
+    assert set(similarity.store.states()) == {'@default/a.jpg'}
+    assert len(similarity.wire.calls) == 1
 
 
 def test_image_request_sends_small_jpeg_without_metadata(similarity):

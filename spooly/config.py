@@ -1,4 +1,4 @@
-from spooly.services.library import normalize_source_id
+from spooly.services.library import normalize_exclusions, normalize_source_id
 
 
 def normalize_media_sources(config, cli_sources=None, media_root=None):
@@ -18,6 +18,7 @@ def normalize_media_sources(config, cli_sources=None, media_root=None):
                 'id': source_id,
                 'name': str(item.get('name') or source_id).strip() or source_id,
                 'path': path,
+                'exclude': normalize_exclusions(item.get('exclude'), field=f'media_sources[{source_id}].exclude'),
             })
     if media_root and all(item.get('id') != 'default' for item in sources):
         sources.insert(0, {'id': 'default', 'name': 'Default', 'path': str(media_root)})

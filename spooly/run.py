@@ -234,7 +234,10 @@ Examples:
         parser.error('Built-in HTTPS has been removed. Delete the old TLS settings and provide HTTPS through an external reverse proxy.')
     configured_port = int(os.environ.get('SPOOLY_PORT', 0)) or config.get('port')
     port = args.port or configured_port or 8000
-    media_sources = normalize_media_sources(config, getattr(args, 'media_source', None), media_root=media_root)
+    try:
+        media_sources = normalize_media_sources(config, getattr(args, 'media_source', None), media_root=media_root)
+    except ValueError as exc:
+        parser.error(str(exc))
     download_source = args.download_source or config.get('download_source') or 'default'
     vision_config = config.get('vision') or config.get('vision_config') or None
     embedding_config = config.get('embedding') or config.get('embedding_config') or None
@@ -294,6 +297,7 @@ Examples:
         app = create_app({
             "MEDIA_ROOT": media_path,
             "MEDIA_SOURCES": media_sources or None,
+            "MEDIA_EXCLUDE": config.get('exclude'),
             "DOWNLOAD_SOURCE": normalize_source_id(download_source),
             "VISION_CONFIG": vision_config,
             "EMBEDDING_CONFIG": embedding_config,

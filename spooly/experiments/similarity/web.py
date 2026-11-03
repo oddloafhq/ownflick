@@ -33,6 +33,8 @@ def register_similarity_routes(app, library_service, thumbnail_service, app_data
     def existing_items(candidates, limit: int) -> list[dict]:
         items = []
         for candidate in candidates:
+            if library_service.is_excluded(candidate['uri']):
+                continue
             uri = library_service.find_existing_uri(candidate['uri'])
             path = library_service.resolve_path(uri)
             if not path or not path.is_file():

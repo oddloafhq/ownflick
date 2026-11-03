@@ -77,7 +77,7 @@ def register_library_routes(
         previews = []
         seen = set()
         for candidate in candidates:
-            if not candidate:
+            if not candidate or library_service.is_excluded(candidate):
                 continue
             uri = library_service.find_existing_uri(candidate)
             if not uri or uri in seen:

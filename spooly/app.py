@@ -87,6 +87,7 @@ def create_app(test_config=None):
         SECRET_KEY = None,
         MEDIA_ROOT = Path(os.environ.get('MEDIA_ROOT', '.')),
         MEDIA_SOURCES = None,
+        MEDIA_EXCLUDE = None,
         DOWNLOAD_SOURCE = 'default',
         VISION_CONFIG = None,
         EMBEDDING_CONFIG = None,
@@ -159,7 +160,9 @@ def create_app(test_config=None):
 
     # Initialize Services
     media_sources = build_media_sources(app.config['MEDIA_ROOT'], app.config.get('MEDIA_SOURCES'))
-    library_service = LibraryService(app.config['MEDIA_ROOT'], media_sources=media_sources)
+    library_service = LibraryService(
+        app.config['MEDIA_ROOT'], media_sources=media_sources, exclude=app.config.get('MEDIA_EXCLUDE'),
+    )
     default_media_root = library_service.media_root
     media_root_str = str(default_media_root)
     app.config['MEDIA_ROOT'] = default_media_root

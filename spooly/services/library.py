@@ -1,6 +1,7 @@
 import os
 from dataclasses import dataclass
-from pathlib import Path
+from fnmatch import fnmatchcase
+from pathlib import Path, PureWindowsPath
 from typing import Any
 
 from spooly.services.trash import TRASH_DIR
@@ -15,6 +16,7 @@ class MediaSource:
     id: str
     name: str
     path: Path
+    exclude: tuple[str, ...] = ()
 
 
 @dataclass(frozen=True)
@@ -39,11 +41,31 @@ def normalize_media_uri(value: Any) -> str:
     return text
 
 
+def normalize_exclusions(value: Any, *, field: str = 'exclude') -> tuple[str, ...]:
+    """Validate filename and source-relative path patterns for media exclusion."""
+    if value is None:
+        return ()
+    if not isinstance(value, (list, tuple)):
+        raise ValueError(f'{field} must be a list of non-empty strings')
+    patterns = []
+    for item in value:
+        if not isinstance(item, str) or not item.strip():
+            raise ValueError(f'{field} must be a list of non-empty strings')
+        pattern = normalize_media_uri(item).casefold()
+        if (
+            not pattern or pattern.startswith(('/', '!')) or PureWindowsPath(pattern).drive
+            or '..' in pattern.split('/')
+        ):
+            raise ValueError(f'{field} patterns must be relative and cannot use .. or negation')
+        patterns.append(pattern)
+    return tuple(dict.fromkeys(patterns))
+
+
 def build_media_sources(media_root: str | Path | None = None, raw_sources: Any = None) -> list[MediaSource]:
     sources: list[MediaSource] = []
     seen: set[str] = set()
 
-    def add_source(source_id: Any, name: Any, path_value: Any) -> None:
+    def add_source(source_id: Any, name: Any, path_value: Any, exclude: Any = None) -> None:
         path_text = str(path_value or '').strip()
         if not path_text:
             return
@@ -55,6 +77,7 @@ def build_media_sources(media_root: str | Path | None = None, raw_sources: Any =
             id=sid,
             name=str(name or sid).strip() or sid,
             path=Path(path_text).expanduser().resolve(),
+            exclude=normalize_exclusions(exclude, field=f'media_sources[{sid}].exclude'),
         ))
 
     if raw_sources:
@@ -64,22 +87,54 @@ def build_media_sources(media_root: str | Path | None = None, raw_sources: Any =
             iterable = raw_sources if isinstance(raw_sources, list) else []
         for item in iterable:
             if isinstance(item, dict):
-                add_source(item.get('id') or item.get('name'), item.get('name') or item.get('id'), item.get('path'))
+                add_source(
+                    item.get('id') or item.get('name'), item.get('name') or item.get('id'),
+                    item.get('path'), item.get('exclude'),
+                )
 
     if media_root and 'default' not in seen:
-        add_source('default', 'Default', media_root)
+        # The CLI may use the first configured source as the legacy default root.
+        # That alias must not bypass the source's exclusion rules.
+        root = Path(media_root).expanduser().resolve()
+        alias = next((source for source in sources if source.path == root), None)
+        add_source('default', 'Default', media_root, alias.exclude if alias else None)
 
     return sources
 
 
 class LibraryService:
-    def __init__(self, media_root: str | Path | None = None, media_sources: list[MediaSource] | None = None):
+    def __init__(
+        self, media_root: str | Path | None = None, media_sources: list[MediaSource] | None = None,
+        *, exclude: Any = None,
+    ):
+        self.exclude = normalize_exclusions(exclude)
         self.sources = media_sources or build_media_sources(media_root)
         if not self.sources:
             self.sources = build_media_sources(media_root or '.')
         self.sources_by_id = {source.id: source for source in self.sources}
         self.default_source_id = 'default' if 'default' in self.sources_by_id else self.sources[0].id
         self.media_root = self.sources_by_id[self.default_source_id].path
+
+    def is_excluded(self, uri: str, *, is_dir: bool = False) -> bool:
+        """Match a media URI or directory and its ancestors without accessing the filesystem."""
+        ref = self.parse_uri(uri)
+        if ref is None:
+            return False
+        patterns = self.exclude + self.sources_by_id[ref.source_id].exclude
+        if not patterns:
+            return False
+        parts = ref.rel_path.casefold().split('/')
+        for index, name in enumerate(parts):
+            directory = is_dir or index < len(parts) - 1
+            relative_path = '/'.join(parts[:index + 1])
+            for pattern in patterns:
+                if pattern.endswith('/') and not directory:
+                    continue
+                pattern = pattern.rstrip('/')
+                candidate = relative_path if '/' in pattern else name
+                if fnmatchcase(candidate, pattern):
+                    return True
+        return False
 
     def scan_source(
         self, source: MediaSource, extensions: set[str] | None = None, *, recursive: bool = True,
@@ -92,13 +147,20 @@ class LibraryService:
 
         paths = []
         for directory, folders, files in os.walk(source.path, onerror=fail):
+            relative_dir = Path(directory).relative_to(source.path)
             if not recursive:
                 folders.clear()
-            elif TRASH_DIR in folders:
-                folders.remove(TRASH_DIR)
+            else:
+                folders[:] = [
+                    name for name in folders
+                    if name != TRASH_DIR and not self.is_excluded(
+                        MediaRef(source.id, (relative_dir / name).as_posix()).to_uri(), is_dir=True,
+                    )
+                ]
             paths.extend(
                 Path(directory) / name for name in files
                 if Path(name).suffix.lower() in extensions
+                and not self.is_excluded(MediaRef(source.id, (relative_dir / name).as_posix()).to_uri())
             )
         return paths
 
