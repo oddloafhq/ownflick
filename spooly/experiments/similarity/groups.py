@@ -85,5 +85,7 @@ def read_photo_groups(library, database: AppDatabase, *, offset: int = 0, limit:
 
 
 def _exists(library, uri: str) -> bool:
+    if library.is_excluded(uri):
+        return False
     path = library.resolve_path(uri)
     return bool(path and path.is_file())

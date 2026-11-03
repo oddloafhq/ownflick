@@ -13,7 +13,10 @@ from .indexing import MediaIndexer
 
 def run_vectorize(config, args, parser):
     media_root = args.media_root or os.environ.get('MEDIA_ROOT') or config.get('media_root')
-    media_sources = normalize_media_sources(config, getattr(args, 'media_source', None), media_root=media_root)
+    try:
+        media_sources = normalize_media_sources(config, getattr(args, 'media_source', None), media_root=media_root)
+    except ValueError as exc:
+        parser.error(str(exc))
     if not media_root and not media_sources:
         parser.error('Specify a media directory:\n  - ownflick vectorize /path/to/media\n  - or configure media_root/media_sources')
     media_path = Path(media_root).expanduser() if media_root else Path(media_sources[0]['path']).expanduser()
@@ -27,7 +30,13 @@ def run_vectorize(config, args, parser):
     except ValueError as exc:
         parser.error(str(exc))
 
-    library = LibraryService(media_path, media_sources=build_media_sources(media_path, media_sources or None))
+    try:
+        library = LibraryService(
+            media_path, media_sources=build_media_sources(media_path, media_sources or None),
+            exclude=config.get('exclude'),
+        )
+    except ValueError as exc:
+        parser.error(str(exc))
     database = AppDatabase(get_database_path())
     database.migrate()
     indexer = MediaIndexer(library, ThumbnailService(media_path, library_service=library), database, embedding)

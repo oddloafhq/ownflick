@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "ownflick"
-version = "0.8.50"
+version = "0.8.51"
 description = "Install OwnFlick, the private media feed formerly called Spooly"
 authors = ["Oddloaf <hello@oddloaf.dev>"]
 readme = "README.md"
@@ -11,7 +11,7 @@ packages = [{ include = "ownflick" }]
 
 [tool.poetry.dependencies]
 python = ">=3.10,<4.0"
-spooly = "==0.8.50"
+spooly = "==0.8.51"
 
 [build-system]
 requires = ["poetry-core"]

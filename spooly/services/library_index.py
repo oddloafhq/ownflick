@@ -597,6 +597,8 @@ class LibraryIndexer:
         for uri in uris:
             if Path(uri).suffix.lower() not in VIDEO_EXTENSIONS | IMAGE_EXTENSIONS | AUDIO_EXTENSIONS:
                 continue
+            if self.library.is_excluded(uri):
+                continue
             path = self.library.resolve_path(uri)
             if path is None or not path.is_file():
                 raise ValueError(f'Media output does not exist or is inaccessible: {uri}')

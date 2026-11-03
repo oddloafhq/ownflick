@@ -135,6 +135,39 @@ A single `media_root: ~/Videos` still works. Sources are merged into one library
 media URIs look like `@source_id/path`, and old bare-path links and favorites keep
 working through the default source.
 
+To keep album artwork or other files out of the library and Flow, add exclusion
+patterns globally or to individual sources:
+
+```yaml
+exclude:
+  - "folder.jpg"
+  - "cover.jpg"
+media_sources:
+  - id: music
+    name: Music
+    path: ~/Music
+    exclude:
+      - "*.png"
+      - "Extras/"
+      - "Albums/*/back.jpg"
+```
+
+- Global and source rules are combined; no files are excluded by default.
+- Matching ignores case. Name patterns (`folder.jpg`, `*.png`, `Extras/`) match
+  at any depth. Patterns with a path (`Albums/*/back.jpg`) are relative to each
+  source root; use `/` between folders.
+- `*`, `?`, and `[abc]` wildcards are supported. In path patterns, `*` can also
+  match `/`. A trailing `/` matches only directories and excludes their contents.
+- Rules must be a list of non-empty strings. Absolute paths, `..` components,
+  and negated rules (`!pattern`) are not supported.
+- Restart the server after editing the configuration. Startup synchronizes available
+  sources and removes excluded items from their index; offline sources retain
+  their previous index until they can be synchronized successfully.
+- Exclusion keeps files on disk and preserves favorites, collections, and
+  history. Downloads and restored files still succeed but are not added to the
+  library when excluded. Remove a rule and restart to include those files again.
+  Existing media links can still access excluded files.
+
 ```bash
 ownflick /path/to/media                        # start with one folder
 ownflick --port 9000                           # custom port

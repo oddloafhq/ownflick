@@ -1,5 +1,11 @@
 # Release notes
 
+## v0.8.51 (2026-11-03) — media exclusions
+
+- Configure `exclude` patterns globally or per media source to keep album artwork such as `folder.jpg` out of the library and Flow ([#9](https://github.com/oddloafhq/ownflick/issues/9)). Rules support case-insensitive filename, path, directory, and wildcard matching.
+- Downloads and restored files respect the same rules. Excluded files remain on disk, and favorites, collections, and history are preserved. Restart after changing configuration; removing a rule makes those files available again after synchronization.
+- Collection previews, saved photo groups, similarity results, and vector preparation also honor exclusions. Offline sources keep their index until they can be synchronized successfully.
+
 ## v0.8.50 (2026-10-27) — refreshed guides and media
 
 - The EmbeddingGemma Docker guide linked from Similar Images now uses OwnFlick
